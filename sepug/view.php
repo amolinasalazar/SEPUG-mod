@@ -160,20 +160,23 @@
 				$timeclosestudents = date('d', $survey->timeclosestudents).' del '.date('m', $survey->timeclosestudents).' a las '.date('H', $survey->timeclosestudents).':'.date('i', $survey->timeclosestudents).' horas';
 				echo $OUTPUT->notification(get_string('closestudentsdate', 'sepug', $timeclosestudents));
 				
+				// Montamos la lista de cursos para el select
 				$courses_list[0] = 'Cursos...';
 				foreach($stud_courses as $cid){
-					if($course = $DB->get_record("course", array("id"=>$cid))){
+					if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id)){
 						$courses_list[$cid] = $course->fullname;
 					}
 				}
 				
-				// imprimirselect, cursos no ha hecho ya sepug_already_done($survey->id, $USER->id)
+				// Imprimimos select
 				$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
 				$mform->set_data(array('cmid'=>$id));
 				//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo '<div class="mdl-align">';
+				echo '<fieldset>';
 				$mform->display();
+				echo '</fieldset>';
 				echo '</div>';
 				echo $OUTPUT->box_end();
 				echo $OUTPUT->footer();
@@ -229,13 +232,28 @@
 			}
 			else{
 			
+				// Montamos la lista de cursos para el select
 				foreach($prof_courses as $cid){
 					if($course = $DB->get_record("course", array("id"=>$cid))){
 						$courses_list[$cid] = $course->fullname;
 					}
 				}
 			
-				$mform = new surveyselect_form(null, array('courses'=>$courses_list));
+				// Imprimimos select
+				$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
+				$mform->set_data(array('cmid'=>$id));
+				//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
+				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+				echo '<div class="mdl-align">';
+				echo '<fieldset>';
+				$mform->display();
+				echo '</fieldset>';
+				echo '</div>';
+				echo $OUTPUT->box_end();
+				echo $OUTPUT->footer();
+			
+			
+				/*$mform = new surveyselect_form(null, array('courses'=>$courses_list));
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo '<div class="mdl-align">';
 				$mform->display();
@@ -263,7 +281,7 @@
 				echo '<br />';
 				echo '</div>';
 				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
+				echo $OUTPUT->footer();*/
 			}
 		}
 	}	

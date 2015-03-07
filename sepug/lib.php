@@ -289,7 +289,7 @@ function sepug_log_info($log) {
  * @param int $groupingid
  * @return array
  */
-function sepug_get_responses($surveyid, $groupid, $groupingid) {
+/*function sepug_get_responses($surveyid, $groupid, $groupingid) {
     global $DB;
 
     $params = array('surveyid'=>$surveyid, 'groupid'=>$groupid, 'groupingid'=>$groupingid);
@@ -310,6 +310,38 @@ function sepug_get_responses($surveyid, $groupid, $groupingid) {
                                    JOIN {user} u ON a.userid = u.id
                             $groupsjoin
                                   WHERE a.survey = :surveyid
+                               GROUP BY $userfields
+                               ORDER BY time ASC", $params);
+}*/
+
+/** SEPUG FUNCTION
+ * @global object
+ * @param int $courseid
+ * @param int $groupid
+ * @param int $groupingid
+ * @return array
+ */
+function sepug_get_responses($courseid, $groupid, $groupingid) {
+    global $DB;
+
+    $params = array('courseid'=>$courseid, 'groupid'=>$groupid, 'groupingid'=>$groupingid);
+
+    if ($groupid) {
+        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid AND gm.groupid = :groupid ";
+
+    } else if ($groupingid) {
+        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid
+                       JOIN {groupings_groups} gg ON gm.groupid = gg.groupid AND gg.groupingid = :groupingid ";
+    } else {
+        $groupsjoin = "";
+    }
+
+    $userfields = user_picture::fields('u');
+    return $DB->get_records_sql("SELECT $userfields, MAX(a.time) as time
+                                   FROM {sepug_answers} a
+                                   JOIN {user} u ON a.userid = u.id
+                            $groupsjoin
+                                  WHERE a.courseid = :courseid
                                GROUP BY $userfields
                                ORDER BY time ASC", $params);
 }
@@ -408,16 +440,29 @@ function sepug_add_analysis($survey, $user, $notes) {
 
     return $DB->insert_record("sepug_analysis", $record, false);
 }
+
 /**
  * @global object
  * @param int $survey
  * @param int $user
  * @return bool
  */
-function sepug_already_done($survey, $user) {
+/*function sepug_already_done($survey, $user) {
     global $DB;
 
     return $DB->record_exists("sepug_answers", array("survey"=>$survey, "userid"=>$user));
+}*/
+
+/** SEPUG FUNCTION
+ * @global object
+ * @param int $survey
+ * @param int $user
+ * @return bool
+ */
+function sepug_already_done($courseid, $user) {
+    global $DB;
+
+    return $DB->record_exists("sepug_answers", array("courseid"=>$courseid, "userid"=>$user));
 }
 /**
  * @param int $surveyid
@@ -425,8 +470,22 @@ function sepug_already_done($survey, $user) {
  * @param int $groupingid
  * @return int
  */
-function sepug_count_responses($surveyid, $groupid, $groupingid) {
+/*function sepug_count_responses($surveyid, $groupid, $groupingid) {
     if ($responses = sepug_get_responses($surveyid, $groupid, $groupingid)) {
+        return count($responses);
+    } else {
+        return 0;
+    }
+}*/
+
+/** SEPUG FUNC
+ * @param int $courseid
+ * @param int $groupid
+ * @param int $groupingid
+ * @return int
+ */
+function sepug_count_responses($courseid, $groupid, $groupingid) {
+    if ($responses = sepug_get_responses($courseid, $groupid, $groupingid)) {
         return count($responses);
     } else {
         return 0;

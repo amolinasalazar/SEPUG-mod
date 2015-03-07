@@ -82,7 +82,7 @@ $completion->set_module_viewed($cm);*/
     echo $OUTPUT->header();
 
 /// Check to see if groups are being used in this survey
-/*    if ($groupmode = groups_get_activity_groupmode($cm)) {   // Groups are being used
+    if ($groupmode = groups_get_activity_groupmode($cm)) {   // Groups are being used
         $currentgroup = groups_get_activity_group($cm);
     } else {
         $currentgroup = 0;
@@ -93,9 +93,10 @@ $completion->set_module_viewed($cm);*/
         $currentgroup = 0;
     }
 
+	//$currentgroup = 0;
     if (has_capability('mod/sepug:readresponses', $context)) {
         $numusers = sepug_count_responses($survey->id, $currentgroup, $groupingid);
-        echo "<div class=\"reportlink\"><a href=\"report.php?id=$cm->id\">".
+        echo "<div class=\"reportlink\"><a href=\"report.php?id=$cm->id\">". // PENDIENTE DE CAMBIAR
               get_string("viewsurveyresponses", "sepug", $numusers)."</a></div>";
     } else if (!$cm->visible) {
         notice(get_string("activityiscurrentlyhidden"));
@@ -104,20 +105,23 @@ $completion->set_module_viewed($cm);*/
     if (!is_enrolled($context)) {
         echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
     }
-*/
+
 
 //  Check the survey hasn't already been filled out.
 
-    if (sepug_already_done($survey->id, $USER->id)) {
+    //if (sepug_already_done($survey->id, $USER->id)) {
+	if (sepug_already_done($cid, $USER->id)) {
 
         //add_to_log($course->id, "sepug", "view graph", "view.php?id=$cm->id", $survey->id, $cm->id);
-        $numusers = survey_count_responses($survey->id, $currentgroup, $groupingid);
+        //$numusers = survey_count_responses($survey->id, $currentgroup, $groupingid);
+		$numusers = survey_count_responses($cid, $currentgroup, $groupingid);
 
         if ($showscales) {
             echo $OUTPUT->heading(get_string("surveycompleted", "sepug"));
             echo $OUTPUT->heading(get_string("peoplecompleted", "sepug", $numusers));
             echo '<div class="resultgraph">';
-            sepug_print_graph("id=$cm->id&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
+            //sepug_print_graph("id=$cm->id&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
+			sepug_print_graph("id=$cid&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
             echo '</div>';
 
         } else {
@@ -151,17 +155,23 @@ $completion->set_module_viewed($cm);*/
 
     echo "<form method=\"post\" action=\"save.php\" id=\"surveyform\">";
     echo '<div>';
-    echo "<input type=\"hidden\" name=\"id\" value=\"$id\" />";
+    echo "<input type=\"hidden\" name=\"id\" value=\"$cmid\" />";
+	echo "<input type=\"hidden\" name=\"id\" value=\"$cid\" />";
     echo "<input type=\"hidden\" name=\"sesskey\" value=\"".sesskey()."\" />";
 
     echo $OUTPUT->box(format_module_intro('sepug', $survey, $cm->id), 'generalbox boxaligncenter bowidthnormal', 'intro');
     echo '<div>'. get_string('allquestionrequireanswer', 'sepug'). '</div>';
 
 // Get all the major questions and their proper order
-    if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions))) {
+    /*if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions))) {
+        print_error('cannotfindquestion', 'sepug');
+    }*/
+	// Obtenemos las preguntas de las plantillas y no de la instanciacion del survey
+	if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
         print_error('cannotfindquestion', 'sepug');
     }
-    $questionorder = explode( ",", $survey->questions);
+    //$questionorder = explode( ",", $survey->questions);
+	$questionorder = explode( ",", $template->questions);
 
 // Cycle through all the questions in order and print them
 
