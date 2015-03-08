@@ -547,7 +547,7 @@ function sepug_deviation($numlist, $mean) {
  * @param arra $questionorder
  * @param int $courseid
  */
-function sepug_print_frequency_table($cm, $results, $questions, $questionorder, $courseid) {
+function sepug_print_frequency_table($results, $questions, $questionorder, $courseid) {
     global $OUTPUT, $DB;
 	
 	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
@@ -590,7 +590,8 @@ function sepug_print_frequency_table($cm, $results, $questions, $questionorder, 
 					}
 					
 					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
-					if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
+					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
+					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
 					    foreach ($aaa as $aa) {
 						    //if (!$group or isset($users[$aa->userid])) {
 							   if ($a1 = $aa->answer1) {
@@ -664,7 +665,7 @@ function sepug_print_frequency_table($cm, $results, $questions, $questionorder, 
  * @param arra $questionorder
  * @param int $courseid
  */
-function sepug_print_dimension_table($cm, $results, $questions, $questionorder, $courseid) {
+function sepug_print_dimension_table($results, $questions, $questionorder, $courseid) {
     global $OUTPUT, $DB;
 	
 	echo '<div>'. get_string('pordimension', 'sepug'). '</div>';

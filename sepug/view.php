@@ -41,7 +41,8 @@
 	
     $PAGE->set_url('/mod/sepug/view.php', array('id'=>$id));
     require_login($course, false, $cm);
-    $context = context_module::instance($cm->id);
+    //$context = context_module::instance($cm->id);
+	$context = context_course::instance($course->id);
 
     require_capability('mod/sepug:participate', $context);
 
@@ -103,7 +104,7 @@
 		
 		echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
         echo $OUTPUT->notification(get_string('sepug_is_not_open', 'sepug'));
-        echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id=1');
+        echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
         echo $OUTPUT->box_end();
         echo $OUTPUT->footer();
         exit;
@@ -117,7 +118,7 @@
 		if(empty($courses) or (count($courses)==1 and array_keys($courses) == 1)){
 			echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 			echo $OUTPUT->notification(get_string('no_courses', 'sepug'));
-			echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id=1');
+			echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 			echo $OUTPUT->box_end();
 			echo $OUTPUT->footer();
 			exit;
@@ -150,10 +151,8 @@
 			if ($survey->timeclosestudents < $checktime){
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->notification(get_string('sepug_is_not_open', 'sepug'));
-				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$course->id);
+				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
-				exit;
 			}
 			else{
 				// Informa del periodo de cierre para los alumnos
@@ -168,19 +167,28 @@
 					}
 				}
 				
-				// Imprimimos select
-				$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
-				$mform->set_data(array('cmid'=>$id));
-				//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
-				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
-				echo '<div class="mdl-align">';
-				echo '<fieldset>';
-				$mform->display();
-				echo '</fieldset>';
-				echo '</div>';
-				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
-				
+				// Si el usuario ha contestado todos los cuestionarios
+				if(count($courses_list)==1){
+					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+					echo $OUTPUT->notification(get_string('all_surveys_are_done', 'sepug'));
+					echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
+					echo $OUTPUT->box_end();
+				}
+				else{
+					// Imprimimos select
+					$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
+					$mform->set_data(array('cmid'=>$id));
+					//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
+					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+					echo '<div class="mdl-align">';
+					echo '<fieldset>';
+					$mform->display();
+					echo '</fieldset>';
+					echo '</div>';
+					echo $OUTPUT->box_end();
+					
+				}
+					
 				
 				//echo html_writer::start_tag('form', array('id' => 'selectform', 'method' => 'post', 'action' => ''));
 				//echo html_writer::select($options, 'selectmenu', '0', false, array('onchange' => 'this.form.submit()'));
@@ -225,10 +233,8 @@
 			
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->notification(get_string('no_results', 'sepug'));
-				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$course->id);
+				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
-				exit;
 			}
 			else{
 			
@@ -250,7 +256,6 @@
 				echo '</fieldset>';
 				echo '</div>';
 				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
 			
 			
 				/*$mform = new surveyselect_form(null, array('courses'=>$courses_list));
@@ -284,5 +289,6 @@
 				echo $OUTPUT->footer();*/
 			}
 		}
+		echo $OUTPUT->footer();
 	}	
 

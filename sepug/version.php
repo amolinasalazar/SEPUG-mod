@@ -10,7 +10,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$module->version   = 2013050192;       // The current module version (Date: YYYYMMDDXX)
+$module->version   = 2013050202;       // The current module version (Date: YYYYMMDDXX)
 $module->requires  = 2013050100;    // Requires this Moodle version
 $module->component = 'mod_sepug';     // Full name of the plugin (used for diagnostics)
 $module->cron      = 0;

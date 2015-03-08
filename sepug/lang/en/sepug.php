@@ -129,6 +129,8 @@ $string['view_intro'] = 'SEPUG: Sistema de Evaluaci&oacute;n del Profesorado de 
 $string['closestudentsdate'] = 'Los alumnos/as pueden completar cuestionarios hasta el {$a}.';
 $string['closedate'] = 'Los profesores/as pueden acceder a sus resultados hasta el {$a}.';
 $string['selectsurvey_label'] = 'Lista de cursos:';
+$string['all_surveys_are_done'] = 'Ya ha completado todos los cuestionarios disponibles. Gracias por tu participaci&oacute;n.';
+
 
 
 

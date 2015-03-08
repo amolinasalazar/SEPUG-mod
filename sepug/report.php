@@ -28,7 +28,9 @@
 
 // Check that all the parameters have been provided.
 
-    $id      = required_param('id', PARAM_INT);           // Course Module ID
+    //$id      = required_param('id', PARAM_INT);           // Course Module ID
+	$cmid = required_param('cmid', PARAM_INT);    // Course Module ID
+	$cid = required_param('cid', PARAM_INT);    // Course ID
     $action  = optional_param('action', '', PARAM_ALPHA); // What to look at
     $qid     = optional_param('qid', 0, PARAM_RAW);       // Question IDs comma-separated list
     $student = optional_param('student', 0, PARAM_INT);   // Student ID
@@ -38,15 +40,18 @@
     $qids = clean_param_array($qids, PARAM_INT);
     $qid = implode (',', $qids);
 
-    if (! $cm = get_coursemodule_from_id('sepug', $id)) {
+    if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
     }
 
-    if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
+    /*if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
+        print_error('coursemisconf');
+    }*/
+	if (! $course = $DB->get_record("course", array("id"=>$cid))) {
         print_error('coursemisconf');
     }
 
-    $url = new moodle_url('/mod/sepug/report.php', array('id'=>$id));
+    $url = new moodle_url('/mod/sepug/report.php', array('cmid'=>$cmid, 'cid'=>$cid));
     if ($action !== '') {
         $url->param('action', $action);
     }
@@ -61,9 +66,10 @@
     }
     $PAGE->set_url($url);
 
-    require_login($course, false, $cm);
+    require_login($course);
 
-    $context = context_module::instance($cm->id);
+    //$context = context_module::instance($cm->id);
+	$context = context_course::instance($course->id);
 
     require_capability('mod/sepug:readresponses', $context);
 
@@ -71,7 +77,11 @@
         print_error('invalidsurveyid', 'sepug');
     }
 
-    if (! $template = $DB->get_record("sepug", array("id"=>$survey->template))) {
+    /*if (! $template = $DB->get_record("sepug", array("id"=>$survey->template))) {
+        print_error('invalidtmptid', 'sepug');
+    }*/
+	$tmpid = sepug_get_template($cid);
+	if (! $template = $DB->get_record("sepug", array("id"=>$tmpid))) {
         print_error('invalidtmptid', 'sepug');
     }
 
@@ -92,7 +102,7 @@
     $strseemoredetail = get_string("seemoredetail", "sepug");
     $strnotes = get_string("notes", "sepug");
 
-    add_to_log($course->id, "sepug", "view report", "report.php?id=$cm->id", "$survey->id", $cm->id);
+    //add_to_log($course->id, "sepug", "view report", "report.php?id=$cm->id", "$survey->id", $cm->id);
 
     switch ($action) {
         case 'download':
@@ -145,21 +155,26 @@
 
     echo $OUTPUT->box_start("generalbox boxaligncenter");
     if ($showscales) {
-        echo "<a href=\"report.php?action=summary&amp;id=$id\">$strsummary</a>";
+        //echo "<a href=\"report.php?action=summary&amp;id=$id\">$strsummary</a>";
+		echo "<a href=\"report.php?action=summary&amp;cmid=$cmid&amp;cid=$cid\">$strsummary</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=scales&amp;id=$id\">$strscales</a>";
-        echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;id=$id\">$strquestions</a>";
+        //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;id=$id\">$strquestions</a>";
+		echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;cmid=$cmid&amp;cid=$cid\">$strquestions</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=students&amp;id=$id\">".get_string('participants')."</a>";
         if (has_capability('mod/sepug:download', $context)) {
-            echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;id=$id\">$strdownload</a>";
+            //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;id=$id\">$strdownload</a>";
+			echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;cmid=$cmid&amp;cid=$cid\">$strdownload</a>";
         }
         if (empty($action)) {
             $action = "summary";
         }
     } else {
-        echo "<a href=\"report.php?action=questions&amp;id=$id\">$strquestions</a>";
+        //echo "<a href=\"report.php?action=questions&amp;id=$id\">$strquestions</a>";
+		echo "<a href=\"report.php?action=questions&amp;cmid=$cmid&amp;cid=$cid\">$strquestions</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=students&amp;id=$id\">".get_string('participants')."</a>";
         if (has_capability('mod/sepug:download', $context)) {
-            echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;id=$id\">$strdownload</a>";
+            //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;id=$id\">$strdownload</a>";
+			echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;cmid=$cmid&amp;cid=$cid\">$strdownload</a>";
         }
         if (empty($action)) {
             $action = "questions";
@@ -182,7 +197,8 @@
 		echo $OUTPUT->heading(get_string("summarytext2", "sepug", $course->fullname));
 		
 		// aqui habra que comprobar si el periodo del COLDP ha finalizado, en vez de que si hay alguna respuesta
-		 if (! $results = sepug_get_responses($survey->id, $currentgroup, $groupingid) ) {
+		 //if (! $results = sepug_get_responses($survey->id, $currentgroup, $groupingid) ) {
+		 if (! $results = sepug_get_responses($cid, $currentgroup, $groupingid) ) {
             echo $OUTPUT->notification(get_string("nobodyyet","sepug"));
 
         } else {
@@ -192,12 +208,15 @@
             echo "</a></div>";*/
 			
 			// Obtenemos todas las preguntas en orden
-			$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions));
-			$questionorder = explode(",", $survey->questions);
+			//$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions));
+			//$questionorder = explode(",", $survey->questions);
+			$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions));
+			$questionorder = explode(",", $template->questions);
 			
-			sepug_print_frequency_table($cm, $results, $questions, $questionorder, $course->id);
+			
+			sepug_print_frequency_table($results, $questions, $questionorder, $cid);
             echo "<br/>";
-			sepug_print_dimension_table($cm, $results, $questions, $questionorder, $course->id);
+			sepug_print_dimension_table($results, $questions, $questionorder, $cid);
 
 			
         }
@@ -258,13 +277,16 @@
             }
 
         } else {        // get all top-level questions
-            $questions = $DB->get_records_list("sepug_questions", "id", explode(',',$survey->questions));
-            $questionorder = explode(",", $survey->questions);
+            //$questions = $DB->get_records_list("sepug_questions", "id", explode(',',$survey->questions));
+            //$questionorder = explode(",", $survey->questions);
+			$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions));
+			$questionorder = explode(",", $template->questions);
 
             echo $OUTPUT->heading($strallquestions);
         }
 
-        if (! $results = sepug_get_responses($survey->id, $currentgroup, $groupingid) ) {
+        //if (! $results = sepug_get_responses($survey->id, $currentgroup, $groupingid) ) {
+		if (! $results = sepug_get_responses($cid, $currentgroup, $groupingid) ) {
             echo $OUTPUT->notification(get_string("nobodyyet","sepug"));
 
         } else {
@@ -294,13 +316,15 @@
                         $subquestion = $subquestions[$val];
                         if ($subquestion->type > 0) {
                             echo "<p class=\"centerpara\">";
-                            sepug_print_graph("id=$id&amp;qid=$subquestion->id&amp;group=$currentgroup&amp;type=question.png");
+                            //sepug_print_graph("id=$id&amp;qid=$subquestion->id&amp;group=$currentgroup&amp;type=question.png");
+							sepug_print_graph("cid=$cid&amp;qid=$subquestion->id&amp;group=$currentgroup&amp;type=question.png");
                             echo "</p>";
                         }
                     }
                 } else if ($question->type > 0 ) {
                     echo "<p class=\"centerpara\">";
-                    sepug_print_graph("id=$id&amp;qid=$question->id&amp;group=$currentgroup&amp;type=question.png");
+                    //sepug_print_graph("id=$id&amp;qid=$question->id&amp;group=$currentgroup&amp;type=question.png");
+					sepug_print_graph("cid=$cid&amp;qid=$question->id&amp;group=$currentgroup&amp;type=question.png");
                     echo "</p>";
 
                 } else {
@@ -310,7 +334,8 @@
 
                     $contents = '<table cellpadding="15" width="100%">';
 
-                    if ($aaa = sepug_get_user_answers($survey->id, $question->id, $currentgroup, "sa.time ASC")) {
+                    //if ($aaa = sepug_get_user_answers($survey->id, $question->id, $currentgroup, "sa.time ASC")) {
+					if ($aaa = sepug_get_user_answers($cid, $question->id, $currentgroup, "sa.time ASC")) {
                         foreach ($aaa as $a) {
                             $contents .= "<tr>";
                             $contents .= '<td class="fullnamecell">'.fullname($a).'</td>';
@@ -502,7 +527,8 @@
 
         echo $OUTPUT->container_start('reportbuttons');
         $options = array();
-        $options["id"] = "$cm->id";
+        //$options["id"] = "$cm->id";
+		$options["cmid"] = "$cmid";
         $options["group"] = $currentgroup;
 
         $options["type"] = "ods";

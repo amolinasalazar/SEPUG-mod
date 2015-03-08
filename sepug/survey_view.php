@@ -42,7 +42,7 @@
         print_error('coursemisconf');
     }
 	
-    $PAGE->set_url('/mod/sepug/survey_view.php', array('cid'=>$cid));
+    $PAGE->set_url('/mod/sepug/survey_view.php', array('cmid'=>$cmid, 'cid'=>$cid));
     require_login($course);
     //$context = context_module::instance($cm->id);
 	$context = context_course::instance($course->id);
@@ -121,7 +121,7 @@ $completion->set_module_viewed($cm);*/
             echo $OUTPUT->heading(get_string("peoplecompleted", "sepug", $numusers));
             echo '<div class="resultgraph">';
             //sepug_print_graph("id=$cm->id&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
-			sepug_print_graph("id=$cid&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
+			sepug_print_graph("cid=$cid&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
             echo '</div>';
 
         } else {
@@ -155,8 +155,8 @@ $completion->set_module_viewed($cm);*/
 
     echo "<form method=\"post\" action=\"save.php\" id=\"surveyform\">";
     echo '<div>';
-    echo "<input type=\"hidden\" name=\"id\" value=\"$cmid\" />";
-	echo "<input type=\"hidden\" name=\"id\" value=\"$cid\" />";
+    echo "<input type=\"hidden\" name=\"cmid\" value=\"$cmid\" />";
+	echo "<input type=\"hidden\" name=\"cid\" value=\"$cid\" />";
     echo "<input type=\"hidden\" name=\"sesskey\" value=\"".sesskey()."\" />";
 
     echo $OUTPUT->box(format_module_intro('sepug', $survey, $cm->id), 'generalbox boxaligncenter bowidthnormal', 'intro');
