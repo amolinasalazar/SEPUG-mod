@@ -119,6 +119,7 @@ $string['sepugclose'] = 'Cerrar acceso y eliminar resultados obtenidos';
 $string['sepugclose_help'] = 'Es obligatorio programar una fecha para cerrar definitivamente el acceso al cuestionario. Al realizar dicha acci&oacute;n, se proceder&aacute; a la eliminaci&oacute;n de todos los datos almacenados en la base de datos. Se recomienda fijar un margen de tiempo prudente para que los resultados puedan ser visualizados.';
 
 $string['sepug_is_not_open'] = 'Esta actividad se encuentra en estos momentos cerrada.';
+$string['sepug_close_for_students'] = 'El periodo de apertura para completar cuestionarios ha finalizado.';
 $string['sepug_not_allowed'] = 'Solo alumnos o profesores pueden usar este modulo.';
 $string['no_courses'] = 'No puedes acceder al cuestionario, ya que no estas matriculado en ning&uacute;n curso de la plataforma Moodle.';
 $string['no_results'] = 'Los resultados de los cuestionarios a&uacute;n no estan listos.';
@@ -130,6 +131,8 @@ $string['closestudentsdate'] = 'Los alumnos/as pueden completar cuestionarios ha
 $string['closedate'] = 'Los profesores/as pueden acceder a sus resultados hasta el {$a}.';
 $string['selectsurvey_label'] = 'Lista de cursos:';
 $string['all_surveys_are_done'] = 'Ya ha completado todos los cuestionarios disponibles. Gracias por tu participaci&oacute;n.';
+$string['show_results'] = 'Visualizar resultados por cursos';
+$string['access_surveys'] = 'Acceder a los cuestionarios';
 
 
 

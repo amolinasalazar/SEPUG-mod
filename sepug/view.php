@@ -150,15 +150,12 @@
 			// pero se encuentra fuera de plazo
 			if ($survey->timeclosestudents < $checktime){
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
-				echo $OUTPUT->notification(get_string('sepug_is_not_open', 'sepug'));
-				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
+				echo $OUTPUT->notification(get_string('sepug_close_for_students', 'sepug'));
+				//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
 			}
 			else{
-				// Informa del periodo de cierre para los alumnos
-				$timeclosestudents = date('d', $survey->timeclosestudents).' del '.date('m', $survey->timeclosestudents).' a las '.date('H', $survey->timeclosestudents).':'.date('i', $survey->timeclosestudents).' horas';
-				echo $OUTPUT->notification(get_string('closestudentsdate', 'sepug', $timeclosestudents));
-				
+			
 				// Montamos la lista de cursos para el select
 				$courses_list[0] = 'Cursos...';
 				foreach($stud_courses as $cid){
@@ -171,7 +168,7 @@
 				if(count($courses_list)==1){
 					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 					echo $OUTPUT->notification(get_string('all_surveys_are_done', 'sepug'));
-					echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
+					//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 					echo $OUTPUT->box_end();
 				}
 				else{
@@ -180,6 +177,7 @@
 					$mform->set_data(array('cmid'=>$id));
 					//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
 					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+					echo $OUTPUT->heading(get_string("access_surveys", "sepug"));
 					echo '<div class="mdl-align">';
 					echo '<fieldset>';
 					$mform->display();
@@ -187,6 +185,9 @@
 					echo '</div>';
 					echo $OUTPUT->box_end();
 					
+					// Informa del periodo de cierre para los alumnos
+					$timeclosestudents = date('d', $survey->timeclosestudents).' del '.date('m', $survey->timeclosestudents).' a las '.date('H', $survey->timeclosestudents).':'.date('i', $survey->timeclosestudents).' horas';
+					echo $OUTPUT->notification(get_string('closestudentsdate', 'sepug', $timeclosestudents));	
 				}
 					
 				
@@ -226,19 +227,15 @@
 			$checktime = time();
 			// pero todavia no estan listos los resultados
 			if ($survey->timeclosestudents > $checktime){
-				// Informa del periodo del cierre para los profesores
-				$timeclose = date('d', $survey->timeclose).' del '.date('m', $survey->timeclose).' a las '.date('H', $survey->timeclose).':'.date('i', $survey->timeclose).' horas';
-				echo $OUTPUT->notification(get_string('closedate', 'sepug', $timeclose));
-			
-			
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->notification(get_string('no_results', 'sepug'));
-				echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
+				//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
 			}
 			else{
-			
+				
 				// Montamos la lista de cursos para el select
+				$courses_list[0] = 'Cursos...';
 				foreach($prof_courses as $cid){
 					if($course = $DB->get_record("course", array("id"=>$cid))){
 						$courses_list[$cid] = $course->fullname;
@@ -246,16 +243,21 @@
 				}
 			
 				// Imprimimos select
-				$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
+				$mform = new surveyselect_form('report.php', array('courses'=>$courses_list));
 				$mform->set_data(array('cmid'=>$id));
 				//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+				echo $OUTPUT->heading(get_string("show_results", "sepug"));
 				echo '<div class="mdl-align">';
 				echo '<fieldset>';
 				$mform->display();
 				echo '</fieldset>';
 				echo '</div>';
 				echo $OUTPUT->box_end();
+				
+				// Informa del periodo del cierre para los profesores
+				$timeclose = date('d', $survey->timeclose).' del '.date('m', $survey->timeclose).' a las '.date('H', $survey->timeclose).':'.date('i', $survey->timeclose).' horas';
+				echo $OUTPUT->notification(get_string('closedate', 'sepug', $timeclose));
 			
 			
 				/*$mform = new surveyselect_form(null, array('courses'=>$courses_list));
