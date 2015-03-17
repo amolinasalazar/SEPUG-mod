@@ -491,6 +491,59 @@ function sepug_count_responses($courseid, $groupid, $groupingid) {
         return 0;
     }
 }
+/** SEPUG FUNCTION
+ * @param array $numlist
+ */
+function sepug_mean($numlist, $numvalues) {
+	//return array_sum(($numlist) / count($numlist));
+	return (array_sum($numlist) / $numvalues);
+}
+
+/** SEPUG FUNCTION
+ * @param array $frequencies
+ */
+function sepug_deviation($frequencies, $mean) {
+	
+	$all_results = array();
+	
+	foreach($frequencies as $key=>$value){
+		for($i=0; $i<$value && $key!=0; $i++){
+			$all_results[] = pow(($key-$mean),2);
+		}
+		//$x = pow(($x-$mean),2);
+	}
+	return sqrt(array_sum($all_results)/count($all_results)); 
+}
+
+/** SEPUG FUNCTION
+ * @param array $array_freq
+ */
+function sepug_freq_sum_values($array_freq) {
+	$sum = 0;
+	//$array = array();
+	/*foreach $array_freq as $key=>$freq{
+		$sum += $key*$freq;
+	}*/
+	
+	foreach ($array_freq as $key=>$freq){
+		$array_freq[$key] = $key*$freq;
+	}
+	
+	return $array_freq;
+}
+
+/** SEPUG FUNCTION
+ * @param array $matrix_freq
+ */
+function sepug_freq_sum_all_values($matrix_freq) {
+	$sum = 0;
+	
+	foreach ($matriz_freq as $array_freq){
+		$sum += sepug_freq_sum_values($array_freq);
+	}
+	
+	return $sum;
+}
 
 /** SEPUG FUNCTION
  * @param int $courseid
@@ -523,31 +576,237 @@ function sepug_print_all_responses($cmid, $results, $courseid) {
 }
 
 /** SEPUG FUNCTION
- * @param array $numlist
+ * @param int $courseid
+ * @return array Devuelve array multidimensional con key=>question id y valor un array con las frecuencias de esa pregunta
  */
-function sepug_mean($numlist) {
-	return array_sum(($numlist) / count($numlist));
-}
-
-/** SEPUG FUNCTION
- * @param array $numlist
- */
-function sepug_deviation($numlist, $mean) {
+function sepug_frequency_values($courseid) {
+	global $DB;
 	
-	foreach($numlist as $x){
-		$x = pow(($x-$mean),2);
+	$freq_matrix = array();
+	
+	// Primero obtenemos el template
+	$tmpid = sepug_get_template($courseid);
+	if (! $template = $DB->get_record("sepug", array("id"=>$tmpid))) {
+        print_error('invalidtmptid', 'sepug');
+    }
+	
+	// Y de el, obtenemos las preguntas y su orden
+	$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions));
+	$questionorder = explode(",", $template->questions);
+
+	// Recorremos todas las preguntas..
+	foreach ($questionorder as $key => $val) {
+		$question = $questions[$val];
+
+		// Si son del tipo < 0, las ignoramos
+		if ($question->type < 0) {  // We have some virtual scales.  DON'T show them.
+			continue;
+		}
+		$question->text = get_string($question->text, "sepug");
+
+		// Tipo multi, obtenemos cada una de ellas
+		if ($question->multi) {
+
+			$subquestions = $DB->get_records_list("sepug_questions", "id", explode(',', $question->multi));
+			$subquestionorder = explode(",", $question->multi);
+			foreach ($subquestionorder as $key => $val) {
+				$subquestion = $subquestions[$val];
+				if ($subquestion->type > 0) {
+				
+					// Por cada subpregunta, calculamos la frecuencia de los resultados..
+					
+					// Obtenemos las opciones disponibles para cada pregunta y preparamos un array para almacenar las frecuencias
+					$subquestion->options = get_string($subquestion->options, "sepug");
+				    $options = explode(",",$subquestion->options);
+
+					while (list($key,) = each($options)) {
+					   $buckets1[$key] = 0;
+					   //$buckets2[$key] = 0;
+					}
+					
+					
+					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
+					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
+					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
+					    foreach ($aaa as $aa) {
+						    //if (!$group or isset($users[$aa->userid])) {
+							   if ($a1 = $aa->answer1) {
+								   $buckets1[$a1 - 1]++;
+							   }  
+							   /*if ($a2 = $aa->answer2) {
+								   $buckets2[$a2 - 1]++;
+							   }*/
+						    //}
+					    }
+						
+						// Almacenamos en una matriz todos los resultados
+						//$freq_matrix[] = $buckets1;
+						$freq_matrix[$subquestion->id] = (array)$buckets1;
+				    }
+					
+					
+					
+					
+				}
+			}
+		} 
 	}
-	return sqrt(array_sum($numlist)/count($numlist)); 
+	return $freq_matrix;
 }
 
 /** SEPUG FUNCTION
+ * Suponiendo un report por curso-profesor
  * @param array $cm
  * @param array $results
  * @param array $questions
  * @param arra $questionorder
  * @param int $courseid
  */
-function sepug_print_frequency_table($results, $questions, $questionorder, $courseid) {
+function sepug_insert_prof_stats($courseid) {
+	global $DB;
+
+	// Obtenemos frequencias de resultados y numero de respuestas por curso
+	$freq_matrix = sepug_frequency_values($courseid);
+	$responses = sepug_count_responses($courseid, 0, 0);
+
+	// Por cada question, calculamos media y desviacion
+	foreach ($freq_matrix as $key=>$freq_array){
+		
+		$sum_array = sepug_freq_sum_values($freq_array);
+		
+		$record = new stdClass();
+		$record->courseid = $courseid;
+		$record->question = $key;
+		$record->mean = sepug_mean($sum_array, $responses);
+		$record->deviation = sepug_deviation($freq_array,$record->mean);
+		
+		// Insertamos datos en DB
+		if (!$stats = $DB->get_record("sepug_prof_stats", array("question"=>$key,"courseid"=>$courseid))) {
+			$DB->insert_record("sepug_prof_stats", $record);
+		}
+		else{
+			$record->id = $stats->id;
+			$DB->update_record("sepug_prof_stats", $record);
+		}
+	}
+	return 0;
+}
+
+/** SEPUG FUNCTION
+ * @param array $cm
+ * @param array $results
+ * @param array $questions
+ * @param array $questionorder
+ * @param int $courseid
+ */
+function sepug_print_frequency_table($questions, $questionorder, $courseid) {
+    global $OUTPUT, $DB;
+	
+	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
+	
+	$frequencies = sepug_frequency_values($courseid);
+	
+	// Preparamos la tabla
+    $table = new html_table();
+    $table->head  = array (get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
+	get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
+	get_string("mean", "sepug"), get_string("deviation", "sepug"));
+    $table->align = array ("left","center","center","center","center","center","center","center","center");
+    $table->size = array ("","","","","","","","","");
+	
+	// Obtenemos resultados de la BD
+	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+		return 1;
+	}
+	else{
+		foreach ($stats as $stat){
+			
+			$question = $DB->get_record("sepug_questions", array("id"=>$stat->question));
+			
+			$table->data[] = array(get_string("$question->shorttext","sepug"), $frequencies[$stat->question][0], $frequencies[$stat->question][1], 
+			$frequencies[$stat->question][2], $frequencies[$stat->question][3], $frequencies[$stat->question][4], $frequencies[$stat->question][5], 
+			$stat->mean, $stat->deviation);
+			
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+
+	// Recorremos todas las preguntas..
+	/*foreach ($questionorder as $key => $val) {
+		$question = $questions[$val];
+
+		// Si son del tipo < 0, las ignoramos
+		if ($question->type < 0) {  // We have some virtual scales.  DON'T show them.
+			continue;
+		}
+		$question->text = get_string($question->text, "sepug");
+
+		// Tipo multi, obtenemos cada una de ellas
+		if ($question->multi) {
+			//echo "<h3>$question->text:</h3>";
+
+			$subquestions = $DB->get_records_list("sepug_questions", "id", explode(',', $question->multi));
+			$subquestionorder = explode(",", $question->multi);
+			foreach ($subquestionorder as $key => $val) {
+				$subquestion = $subquestions[$val];
+				$index = $val-1;
+				if ($subquestion->type > 0) {
+				
+					// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
+					$table->data[] = array(get_string("$subquestion->shorttext","sepug"), $frequencies[$index][0], $frequencies[$index][1], $frequencies[$index][2], $frequencies[$index][3], $frequencies[$index][4], $frequencies[$index][5]);
+				
+					// Por cada subpregunta, calculamos la frecuencia de los resultados..
+					/*
+					// Obtenemos las opciones disponibles para cada pregunta y preparamos un array para almacenar las frecuencias
+					$subquestion->options = get_string($subquestion->options, "sepug");
+				    $options = explode(",",$subquestion->options);
+
+					while (list($key,) = each($options)) {
+					   $buckets1[$key] = 0;
+					   //$buckets2[$key] = 0;
+					}
+					
+					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
+					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
+					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
+					    foreach ($aaa as $aa) {
+						    //if (!$group or isset($users[$aa->userid])) {
+							   if ($a1 = $aa->answer1) {
+								   $buckets1[$a1 - 1]++;
+							   }  
+							   /*if ($a2 = $aa->answer2) {
+								   $buckets2[$a2 - 1]++;
+							   }
+						    //}
+					    }
+						// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
+						$table->data[] = array(get_string("$subquestion->shorttext","sepug"),$buckets1[0],$buckets1[1],$buckets1[2],$buckets1[3], $buckets1[4],$buckets1[5]);
+				    }else{
+						$table->data[] = array($subquestion->shorttext,"","","","","","");
+					}
+				}
+			}
+		} 
+	}*/
+
+    echo html_writer::table($table);
+}
+
+/** SEPUG FUNCTION
+ * @param array $cm
+ * @param array $results
+ * @param array $questions
+ * @param array $questionorder
+ * @param int $courseid
+ */
+/*function sepug_print_frequency_table($questions, $questionorder, $courseid) {
     global $OUTPUT, $DB;
 	
 	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
@@ -599,7 +858,7 @@ function sepug_print_frequency_table($results, $questions, $questionorder, $cour
 							   }  
 							   /*if ($a2 = $aa->answer2) {
 								   $buckets2[$a2 - 1]++;
-							   }*/
+							   }
 						    //}
 					    }
 						// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
@@ -608,55 +867,13 @@ function sepug_print_frequency_table($results, $questions, $questionorder, $cour
 				    }else{
 						$table->data[] = array($subquestion->shorttext,"","","","","","");
 					}
-					
-					/*echo "<p class=\"centerpara\">";
-					echo "<a title=\"$strseemoredetail\" href=\"report.php?action=question&amp;id=$id&amp;qid=$subquestion->id\">";
-					sepug_print_graph("id=$id&amp;qid=$subquestion->id&amp;group=$currentgroup&amp;type=question.png");
-					echo "</a></p>";*/
+
 				}
 			}
-		} else if ($question->type > 0 ) {
-			/*echo "<p class=\"centerpara\">";
-			echo "<a title=\"$strseemoredetail\" href=\"report.php?action=question&amp;id=$id&amp;qid=$question->id\">";
-			sepug_print_graph("id=$id&amp;qid=$question->id&amp;group=$currentgroup&amp;type=question.png");
-			echo "</a></p>";*/
-
-		} else {
-			/*$table = new html_table();
-			$table->head = array($question->text);
-			$table->align = array ("left");
-
-			$contents = '<table cellpadding="15" width="100%">';
-
-			if ($aaa = sepug_get_user_answers($survey->id, $question->id, $currentgroup, "sa.time ASC")) {
-				foreach ($aaa as $a) {
-					$contents .= "<tr>";
-					$contents .= '<td class="fullnamecell">'.fullname($a).'</td>';
-					$contents .= '<td valign="top">'.$a->answer1.'</td>';
-					$contents .= "</tr>";
-				}
-			}
-			$contents .= "</table>";
-
-			$table->data[] = array($contents);
-
-			echo html_writer::table($table);
-
-			echo $OUTPUT->spacer(array('height'=>30)); // should be done with CSS instead
-			*/
-		}
+		} 
 	}
-	
-	
-
-    /*foreach ($results as $a) {
-        $table->data[] = array($OUTPUT->user_picture($a, array('courseid'=>$courseid)),
-               html_writer::link("report.php?action=student&student=$a->id&id=$cmid", fullname($a)),
-               userdate($a->time));
-    }*/
-
     echo html_writer::table($table);
-}
+}*/
 
 /** SEPUG FUNCTION
  * @param array $cm
@@ -680,6 +897,7 @@ function sepug_print_dimension_table($results, $questions, $questionorder, $cour
 	
 	$result = pow(3,2);
 
+	// f. categorias
 	
 	$table->data[] = array(get_string("dim1","sepug"),(string)$result,"3.4","","");
 	$table->data[] = array(get_string("dim2","sepug"),"2.3","3.4");

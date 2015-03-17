@@ -191,7 +191,7 @@
 
     switch ($action) {
 
-		// Aqui carga la pestaña RESUMEN
+	// Aqui carga la pestaña RESUMEN
       case "summary":
         echo $OUTPUT->heading(get_string("summarytext1", "sepug", ""));
 		echo $OUTPUT->heading(get_string("summarytext2", "sepug", $course->fullname));
@@ -213,11 +213,11 @@
 			$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions));
 			$questionorder = explode(",", $template->questions);
 			
-			
-			sepug_print_frequency_table($results, $questions, $questionorder, $cid);
+			sepug_insert_prof_stats($cid);
+			sepug_print_frequency_table($questions, $questionorder, $cid);
             echo "<br/>";
 			sepug_print_dimension_table($results, $questions, $questionorder, $cid);
-
+			
 			
         }
 
