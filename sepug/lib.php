@@ -56,6 +56,13 @@ define("SURVEY_COLDP15", "1");
 //define("SURVEY_ATTLS",                   "4");
 //define("SURVEY_CIQ",                     "5");
 
+// Preguntas segun dimension
+global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
+$DIM_PLANIF = array(1,2,4,5,18);
+$DIM_COMP_DOC = array(6,8,9,10,11,12,14);
+$DIM_EV_APREND = array(3,16,17);
+$DIM_AMB = array(13,15);
+
 
 // STANDARD FUNCTIONS ////////////////////////////////////////////////////////
 /**
@@ -708,11 +715,16 @@ function sepug_print_frequency_table($questions, $questionorder, $courseid) {
 	
 	// Preparamos la tabla
     $table = new html_table();
-    $table->head  = array (get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
+	$table->head  = array ("",get_string("curso","sepug"),get_string("area","sepug"),
+	get_string("titulacion","sepug"),get_string("universidad","sepug"));
+	$table->headspan  = array (7,2,2,2,2);
+    $table->data[]  = array(get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
 	get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
-	get_string("mean", "sepug"), get_string("deviation", "sepug"));
-    $table->align = array ("left","center","center","center","center","center","center","center","center");
-    $table->size = array ("","","","","","","","","");
+	get_string("mean", "sepug"), get_string("deviation", "sepug"),get_string("mean", "sepug"), get_string("deviation", "sepug"),
+	get_string("mean", "sepug"), get_string("deviation", "sepug"),get_string("mean", "sepug"), get_string("deviation", "sepug"));
+    $table->align = array ("left","center","center","center","center","center","center","center","center","center","center","center",
+	"center","center","center");
+    $table->size = array ("","","","","","","","","","","","","","","");
 	
 	// Obtenemos resultados de la BD
 	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
@@ -729,73 +741,6 @@ function sepug_print_frequency_table($questions, $questionorder, $courseid) {
 			
 		}
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-
-	// Recorremos todas las preguntas..
-	/*foreach ($questionorder as $key => $val) {
-		$question = $questions[$val];
-
-		// Si son del tipo < 0, las ignoramos
-		if ($question->type < 0) {  // We have some virtual scales.  DON'T show them.
-			continue;
-		}
-		$question->text = get_string($question->text, "sepug");
-
-		// Tipo multi, obtenemos cada una de ellas
-		if ($question->multi) {
-			//echo "<h3>$question->text:</h3>";
-
-			$subquestions = $DB->get_records_list("sepug_questions", "id", explode(',', $question->multi));
-			$subquestionorder = explode(",", $question->multi);
-			foreach ($subquestionorder as $key => $val) {
-				$subquestion = $subquestions[$val];
-				$index = $val-1;
-				if ($subquestion->type > 0) {
-				
-					// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
-					$table->data[] = array(get_string("$subquestion->shorttext","sepug"), $frequencies[$index][0], $frequencies[$index][1], $frequencies[$index][2], $frequencies[$index][3], $frequencies[$index][4], $frequencies[$index][5]);
-				
-					// Por cada subpregunta, calculamos la frecuencia de los resultados..
-					/*
-					// Obtenemos las opciones disponibles para cada pregunta y preparamos un array para almacenar las frecuencias
-					$subquestion->options = get_string($subquestion->options, "sepug");
-				    $options = explode(",",$subquestion->options);
-
-					while (list($key,) = each($options)) {
-					   $buckets1[$key] = 0;
-					   //$buckets2[$key] = 0;
-					}
-					
-					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
-					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
-					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
-					    foreach ($aaa as $aa) {
-						    //if (!$group or isset($users[$aa->userid])) {
-							   if ($a1 = $aa->answer1) {
-								   $buckets1[$a1 - 1]++;
-							   }  
-							   /*if ($a2 = $aa->answer2) {
-								   $buckets2[$a2 - 1]++;
-							   }
-						    //}
-					    }
-						// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
-						$table->data[] = array(get_string("$subquestion->shorttext","sepug"),$buckets1[0],$buckets1[1],$buckets1[2],$buckets1[3], $buckets1[4],$buckets1[5]);
-				    }else{
-						$table->data[] = array($subquestion->shorttext,"","","","","","");
-					}
-				}
-			}
-		} 
-	}*/
-
     echo html_writer::table($table);
 }
 
@@ -875,6 +820,31 @@ function sepug_print_frequency_table($questions, $questionorder, $courseid) {
     echo html_writer::table($table);
 }*/
 
+
+/** SEPUG FUNCTION
+ */
+function sepug_get_dim_results($stats, $dim) {
+		
+	// Recogemos los datos de las preguntas que pertenezcan a esa dimension
+	$mean_array = array();
+	$deviation_array = array();
+	foreach ($stats as $stat){
+		if(in_array($stat->question, $dim)){
+			$mean_array[] = $stat->mean;
+			$deviation_array[] = $stat->deviation;
+		}
+	}
+	
+	$mean = sepug_mean($mean_array, count($mean_array));
+	$dev_sum = 0;
+	foreach($deviation_array as $dev){
+		$dev_sum += pow($dev,2);
+	}
+	$deviation = sqrt($dev_sum);
+	
+	return array($mean, $deviation);
+}
+
 /** SEPUG FUNCTION
  * @param array $cm
  * @param array $results
@@ -884,26 +854,39 @@ function sepug_print_frequency_table($questions, $questionorder, $courseid) {
  */
 function sepug_print_dimension_table($results, $questions, $questionorder, $courseid) {
     global $OUTPUT, $DB;
+	global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
 	
 	echo '<div>'. get_string('pordimension', 'sepug'). '</div>';
 	
 	// Preparamos la tabla
     $table = new html_table();
-    $table->head  = array ("",get_string("profesor","sepug"),get_string("universidad","sepug"));
+    $table->head  = array ("",get_string("curso","sepug"),get_string("universidad","sepug"));
 	$table->headspan  = array (1,2,2);
     $table->align = array ("left","center","center");
     $table->size = array ("","","","","");
-	$table->data[] = array(get_string("dimension","sepug"),get_string("media","sepug"),get_string("desviacion","sepug"),get_string("media","sepug"),get_string("desviacion","sepug"));
+	$table->data[] = array(get_string("dimension","sepug"),get_string("mean","sepug"),get_string("deviation","sepug"),
+	get_string("mean","sepug"),get_string("deviation","sepug"));
 	
-	$result = pow(3,2);
-
-	// f. categorias
-	
-	$table->data[] = array(get_string("dim1","sepug"),(string)$result,"3.4","","");
-	$table->data[] = array(get_string("dim2","sepug"),"2.3","3.4");
-	$table->data[] = array(get_string("dim3","sepug"),"2.3","3.4");
-	$table->data[] = array(get_string("dim4","sepug"),"2.3","3.4");
-
+	// Obtenemos resultados de la BD
+	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+		return 1;
+	}
+	else{
+		
+		// Por cada dimension, obtenemos la media y desviacion
+		$mean_array = array();
+		$deviation_array = array();
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_PLANIF);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_COMP_DOC);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_EV_APREND);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_AMB);
+		
+		// Completamos la tabla de resultados
+		$table->data[] = array(get_string("dim1","sepug"),$mean_array[0],$deviation_array[0],"","");
+		$table->data[] = array(get_string("dim2","sepug"),$mean_array[1],$deviation_array[1],"","");
+		$table->data[] = array(get_string("dim3","sepug"),$mean_array[2],$deviation_array[2],"","");
+		$table->data[] = array(get_string("dim4","sepug"),$mean_array[3],$deviation_array[3],"","");
+	}
     echo html_writer::table($table);
 }
 

@@ -139,17 +139,16 @@ $string['access_surveys'] = 'Acceder a los cuestionarios';
 
 
 $string['summary'] = 'Informe resultados';
-$string['summarytext1'] = 'Informe de calidad de la actividad docente ejercida por {$a}';
+$string['summarytext1'] = 'Informe de calidad de la actividad docente';
 $string['summarytext2'] = 'M&oacute;dulo/asignatura: {$a}';
 $string['porfrecuencia'] = 'Tabla de Frecuencia de Respuestas';
 $string['pordimension'] = 'Tabla de Resultados seg&uacute;n Dimensi&oacute;n';
 $string['dimension'] = 'Dimensi&oacute;n';
 $string['profesor'] = 'Profesor';
+$string['curso'] = 'Curso';
 $string['area'] = '&Aacute;rea';
 $string['titulacion'] = 'Titulaci&oacute;n';
 $string['universidad'] = 'Universidad';
-$string['media'] = 'Media';
-$string['desviacion'] = 'Desviaci&oacute;n';
 $string['dim1'] = 'Dimensi&oacute;n 1: Planificaci&oacute;n de la docencia y cumplimiento del Plan Docente';
 $string['dim2'] = 'Dimensi&oacute;n 2: Competencias docentes';
 $string['dim3'] = 'Dimensi&oacute;n 3: Evaluaci&oacute;n de los aprendizajes';
