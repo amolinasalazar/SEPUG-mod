@@ -81,7 +81,7 @@
 		<FIELD NAME="question" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="mean" TYPE="float" LENGTH="2" DECIMALS ="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
 		<FIELD NAME="deviation" TYPE="float" LENGTH="2" DECIMALS ="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-		<FIELD NAME="depth" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+		<FIELD NAME="catname" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

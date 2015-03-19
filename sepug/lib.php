@@ -503,7 +503,10 @@ function sepug_count_responses($courseid, $groupid, $groupingid) {
  */
 function sepug_mean($numlist, $numvalues) {
 	//return array_sum(($numlist) / count($numlist));
-	return (array_sum($numlist) / $numvalues);
+	if($numvalues!=0)
+		return (array_sum($numlist) / $numvalues);
+	else
+		return 0;
 }
 
 /** SEPUG FUNCTION
@@ -663,10 +666,6 @@ function sepug_frequency_values($courseid) {
 
 /** SEPUG FUNCTION
  * Suponiendo un report por curso-profesor
- * @param array $cm
- * @param array $results
- * @param array $questions
- * @param arra $questionorder
  * @param int $courseid
  */
 function sepug_insert_prof_stats($courseid) {
@@ -700,13 +699,128 @@ function sepug_insert_prof_stats($courseid) {
 }
 
 /** SEPUG FUNCTION
+ * @param int $courseid
+ */
+function sepug_insert_global_stats(){
+	global $DB, $CFG;
+	
+	require_once($CFG->dirroot.'/lib/coursecatlib.php');
+	
+	// Hallar la profundidad maxima de las categorias, por cada
+	
+	// Hallamos todos los cursos asociados a las categorias que tengan el mismo nombre
+	
+	// Obtenemos todos los resultados de los cursos y hallamos una media y desviacion total
+	
+	// Repetir con demas categorias
+	
+	//Funciones
+	//get_child_categories()
+	//get_course_category_tree()
+	//fetch_course_category()
+	//$cat1 = coursecat::get(4);
+	//$cm = $cat1->get_courses(array('recursive' => 1));
+	
+	// Obtenemos todas las categorias
+	if (!$categories = $DB->get_records("course_categories", array("visible"=>1))) {
+		return 1;
+	}
+	
+	$computed_cat = array();
+	// Por cada categoria...
+	foreach($categories as $cat){
+		
+		// Si ya hemos explorado las categorias con ese nombre, salimos
+		if(!in_array($cat->name, $computed_cat)){
+			
+			$computed_cat[] = $cat->name;
+		
+			// Obtenemos todas las categorias que tengan el mismo nombre que esta
+			if (!$cat_same_name = $DB->get_records("course_categories", array("name"=>$cat->name))) {
+				return 1;
+			}
+			
+			// Por cada categoria, buscamos recursivamente todos los cursos asociados
+			$courses_list = array();
+			foreach($cat_same_name as $cat_sm){
+				$cat_class = coursecat::get($cat_sm->id);
+				$courses = $cat_class->get_courses(array('recursive' => 1));
+				// Si tiene cursos, los añadimos a la lista
+				if(!empty($courses)){
+					foreach($courses as $course){
+						if(!in_array($course->id,$courses_list)){
+							// Si no hay datos para ese curso, lo ignoramos
+							if(sepug_count_responses($course->id, 0, 0)!=0){
+								$courses_list[] = $course->id; // $course_list tiene todos los cursos de una categoria general
+							}
+						}
+					}
+				}
+			}
+			
+			// Si existe algun curso en esas categorias
+			if(!empty($courses_list)){
+			
+				// Obtenemos los resultados de todos los cursos por cada pregunta y calculamos media y desviacion
+				$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
+				foreach($questions as $question){
+					$mean_array=array();
+					$deviation_array=array();
+					foreach($courses_list as $cid){
+						// Si hay datos sobre esa pregunta en ese curso, los añadimos a los arrays
+						if ($stat = $DB->get_record("sepug_prof_stats", array("courseid"=>$cid,"question"=>$question))) {
+							$mean_array[]=$stat->mean;
+							$deviation_array[]=$stat->deviation;
+						}
+					}
+					
+					$record = new stdClass();
+					$record->question = $question;
+					$record->catname = $cat->name;
+					$record->mean = sepug_mean($mean_array, count($mean_array));
+					$dev_sum = 0;
+					foreach($deviation_array as $dev){
+						$dev_sum += pow($dev,2);
+					}
+					$record->deviation = sqrt($dev_sum);
+					
+					// Insertamos datos en DB
+					if (!$global_stat = $DB->get_record("sepug_global_stats", array("question"=>$question, "catname"=>$cat->name))) {
+						$DB->insert_record("sepug_global_stats", $record);
+					}
+					else{
+						$record->id = $global_stat->id;
+						$DB->update_record("sepug_global_stats", $record);
+					}
+					
+				}//endforeach
+			}//endif
+		}
+	}
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}
+
+/** SEPUG FUNCTION
  * @param array $cm
  * @param array $results
  * @param array $questions
  * @param array $questionorder
  * @param int $courseid
  */
-function sepug_print_frequency_table($questions, $questionorder, $courseid) {
+function sepug_print_frequency_table($courseid) {
     global $OUTPUT, $DB;
 	
 	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
@@ -846,13 +960,9 @@ function sepug_get_dim_results($stats, $dim) {
 }
 
 /** SEPUG FUNCTION
- * @param array $cm
- * @param array $results
- * @param array $questions
- * @param arra $questionorder
  * @param int $courseid
  */
-function sepug_print_dimension_table($results, $questions, $questionorder, $courseid) {
+function sepug_print_dimension_table($courseid) {
     global $OUTPUT, $DB;
 	global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
 	

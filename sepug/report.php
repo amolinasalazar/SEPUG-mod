@@ -214,9 +214,10 @@
 			$questionorder = explode(",", $template->questions);
 			
 			sepug_insert_prof_stats($cid);
-			sepug_print_frequency_table($questions, $questionorder, $cid);
+			sepug_insert_global_stats();
+			sepug_print_frequency_table($cid);
             echo "<br/>";
-			sepug_print_dimension_table($results, $questions, $questionorder, $cid);
+			sepug_print_dimension_table($cid);
 			
 			
         }
