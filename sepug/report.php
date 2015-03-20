@@ -213,6 +213,8 @@
 			$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions));
 			$questionorder = explode(",", $template->questions);
 			
+			
+			// COMPROBAR QUE HAY RESULTADOS
 			sepug_insert_prof_stats($cid);
 			sepug_insert_global_stats();
 			sepug_print_frequency_table($cid);

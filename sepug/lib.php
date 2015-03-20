@@ -703,23 +703,7 @@ function sepug_insert_prof_stats($courseid) {
  */
 function sepug_insert_global_stats(){
 	global $DB, $CFG;
-	
 	require_once($CFG->dirroot.'/lib/coursecatlib.php');
-	
-	// Hallar la profundidad maxima de las categorias, por cada
-	
-	// Hallamos todos los cursos asociados a las categorias que tengan el mismo nombre
-	
-	// Obtenemos todos los resultados de los cursos y hallamos una media y desviacion total
-	
-	// Repetir con demas categorias
-	
-	//Funciones
-	//get_child_categories()
-	//get_course_category_tree()
-	//fetch_course_category()
-	//$cat1 = coursecat::get(4);
-	//$cm = $cat1->get_courses(array('recursive' => 1));
 	
 	// Obtenemos todas las categorias
 	if (!$categories = $DB->get_records("course_categories", array("visible"=>1))) {
@@ -797,20 +781,6 @@ function sepug_insert_global_stats(){
 			}//endif
 		}
 	}
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 }
 
 /** SEPUG FUNCTION
@@ -824,37 +794,58 @@ function sepug_print_frequency_table($courseid) {
     global $OUTPUT, $DB;
 	
 	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
-	
-	$frequencies = sepug_frequency_values($courseid);
-	
-	// Preparamos la tabla
-    $table = new html_table();
-	$table->head  = array ("",get_string("curso","sepug"),get_string("area","sepug"),
-	get_string("titulacion","sepug"),get_string("universidad","sepug"));
-	$table->headspan  = array (7,2,2,2,2);
-    $table->data[]  = array(get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
-	get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
-	get_string("mean", "sepug"), get_string("deviation", "sepug"),get_string("mean", "sepug"), get_string("deviation", "sepug"),
-	get_string("mean", "sepug"), get_string("deviation", "sepug"),get_string("mean", "sepug"), get_string("deviation", "sepug"));
-    $table->align = array ("left","center","center","center","center","center","center","center","center","center","center","center",
-	"center","center","center");
-    $table->size = array ("","","","","","","","","","","","","","","");
+	$table = new html_table();
 	
 	// Obtenemos resultados de la BD
-	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
-		return 1;
-	}
-	else{
+	if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+		
+		// Obtenemos las frecuencias de los resultados
+		$frequencies = sepug_frequency_values($courseid);
+		
+		// Obtenemos las categorias unicas
+		$main_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats}");
+	
+		// Preparamos la tabla
+		$head = array("",get_string("curso","sepug"));
+		$headspan = array (7,2);
+		$data_head = array(get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
+		get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
+		get_string("mean", "sepug"), get_string("deviation", "sepug"));
+		$size = array("","","","","","","","","");
+		$align = array ("left","center","center","center","center","center","center","center","center");
+		foreach($main_categories as $cat){
+			$head[] = $cat->catname;
+			$headspan[] = 2;
+			array_push($data_head, get_string("mean", "sepug"), get_string("deviation", "sepug"));
+			array_push($align, "center", "center");
+			array_push($size,"","");
+		}
+		$table->head  = $head;
+		$table->headspan = $headspan;
+		$table->data[]  = $data_head;
+		$table->align = $align;
+		$table->size = $size;
+		
+		//$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
 		foreach ($stats as $stat){
 			
 			$question = $DB->get_record("sepug_questions", array("id"=>$stat->question));
 			
-			$table->data[] = array(get_string("$question->shorttext","sepug"), $frequencies[$stat->question][0], $frequencies[$stat->question][1], 
+			$data = array(get_string("$question->shorttext","sepug"), $frequencies[$stat->question][0], $frequencies[$stat->question][1], 
 			$frequencies[$stat->question][2], $frequencies[$stat->question][3], $frequencies[$stat->question][4], $frequencies[$stat->question][5], 
-			$stat->mean, $stat->deviation);
+			$stat->mean, $stat->deviation);	
 			
-		}
+			// Obtenemos los resultados globales de las encuestas
+			$global_stats = $DB->get_records("sepug_global_stats",array("question"=>$stat->question));
+			
+			foreach($global_stats as $gstats){
+				$data[] = $gstats->mean;
+				$data[] = $gstats->deviation;
+			}
+			$table->data[] = $data;
+		}	
 	}
+	
     echo html_writer::table($table);
 }
 
