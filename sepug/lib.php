@@ -57,11 +57,12 @@ define("SURVEY_COLDP15", "1");
 //define("SURVEY_CIQ",                     "5");
 
 // Preguntas segun dimension
-global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
+global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB, $CAT_NAMES;
 $DIM_PLANIF = array(1,2,4,5,18);
 $DIM_COMP_DOC = array(6,8,9,10,11,12,14);
 $DIM_EV_APREND = array(3,16,17);
 $DIM_AMB = array(13,15);
+$CAT_NAMES = array("ciclo lectivo","universidad","titulaciones",0);
 
 
 // STANDARD FUNCTIONS ////////////////////////////////////////////////////////
@@ -698,7 +699,7 @@ function sepug_insert_prof_stats($courseid) {
 	return 0;
 }
 
-/** SEPUG FUNCTION
+/** SEPUG FUNCTION (por nombre de categorias)
  * @param int $courseid
  */
 function sepug_insert_global_stats(){
@@ -783,6 +784,7 @@ function sepug_insert_global_stats(){
 	}
 }
 
+
 /** SEPUG FUNCTION
  * @param array $cm
  * @param array $results
@@ -803,8 +805,23 @@ function sepug_print_frequency_table($courseid) {
 		$frequencies = sepug_frequency_values($courseid);
 		
 		// Obtenemos las categorias unicas
-		$main_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats}");
-	
+		//$main_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats}");
+		
+		// No quedamos solo con las categorias globales que esten relacionadas con este curso, una por nivel de profundidad
+		$course = $DB->get_record("course", array("id"=>$courseid));
+		$main_categories = array();
+		if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
+			$parent_id = $cat_course->parent;
+			$depth = $cat_course->depth;
+			for($i=0; $i<$depth; $i++){
+				$main_categories[] = $DB->get_record("course_categories", array("id"=>$cat_course->id),"name");
+				if($parent_id!=0){
+					$parent_id = $cat_course->parent;
+					$cat_course = $DB->get_record("course_categories", array("id"=>$parent_id));
+				}
+			}
+		}
+		
 		// Preparamos la tabla
 		$head = array("",get_string("curso","sepug"));
 		$headspan = array (7,2);
@@ -814,7 +831,8 @@ function sepug_print_frequency_table($courseid) {
 		$size = array("","","","","","","","","");
 		$align = array ("left","center","center","center","center","center","center","center","center");
 		foreach($main_categories as $cat){
-			$head[] = $cat->catname;
+			//$head[] = $cat->catname;
+			$head[] = $cat->name;
 			$headspan[] = 2;
 			array_push($data_head, get_string("mean", "sepug"), get_string("deviation", "sepug"));
 			array_push($align, "center", "center");
@@ -836,11 +854,17 @@ function sepug_print_frequency_table($courseid) {
 			$stat->mean, $stat->deviation);	
 			
 			// Obtenemos los resultados globales de las encuestas
-			$global_stats = $DB->get_records("sepug_global_stats",array("question"=>$stat->question));
+			//$global_stats = $DB->get_records("sepug_global_stats",array("question"=>$stat->question));
 			
-			foreach($global_stats as $gstats){
+			/*foreach($global_stats as $gstats){
 				$data[] = $gstats->mean;
 				$data[] = $gstats->deviation;
+			}*/
+			
+			foreach($main_categories as $cat){
+				$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name));
+				$data[] = $gstats->mean;
+				$data[] = $gstats->deviation;				
 			}
 			$table->data[] = $data;
 		}	
