@@ -957,6 +957,7 @@ function sepug_get_dim_results($stats, $dim) {
 	// Recogemos los datos de las preguntas que pertenezcan a esa dimension
 	$mean_array = array();
 	$deviation_array = array();
+	
 	foreach ($stats as $stat){
 		if(in_array($stat->question, $dim)){
 			$mean_array[] = $stat->mean;
@@ -992,25 +993,52 @@ function sepug_print_dimension_table($courseid) {
 	$table->data[] = array(get_string("dimension","sepug"),get_string("mean","sepug"),get_string("deviation","sepug"),
 	get_string("mean","sepug"),get_string("deviation","sepug"));
 	
+	// Obtenemos la categoria padre a nivel 1 de profundidad del curso
+	$course = $DB->get_record("course", array("id"=>$courseid));
+	if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
+		// Si el parent es 0, la categoria ya esta a nivel 1
+		if($cat_course->parent != 0){
+			$parent_id = $cat_course->path[1];
+			$parent_cat = $DB->get_record("course_categories", array("id"=>$parent_id),"name");
+		}
+		else{
+			$parent_cat = $cat_course;
+		}
+	}
+	
 	// Obtenemos resultados de la BD
-	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid)) || 
+	!$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name))) {
 		return 1;
 	}
 	else{
 		
+		$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name));
+		
 		// Por cada dimension, obtenemos la media y desviacion
 		$mean_array = array();
 		$deviation_array = array();
+		$gmean_array = array();
+		$gdeviation_array = array();
+		
+		// Valores por curso
 		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_PLANIF);
 		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_COMP_DOC);
 		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_EV_APREND);
 		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_AMB);
 		
+		// Valores globales
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_PLANIF);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_COMP_DOC);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_EV_APREND);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_AMB);
+		
 		// Completamos la tabla de resultados
-		$table->data[] = array(get_string("dim1","sepug"),$mean_array[0],$deviation_array[0],"","");
-		$table->data[] = array(get_string("dim2","sepug"),$mean_array[1],$deviation_array[1],"","");
-		$table->data[] = array(get_string("dim3","sepug"),$mean_array[2],$deviation_array[2],"","");
-		$table->data[] = array(get_string("dim4","sepug"),$mean_array[3],$deviation_array[3],"","");
+		$table->data[] = array(get_string("dim1","sepug"),$mean_array[0],$deviation_array[0],$gmean_array[0],$gdeviation_array[0]);
+		$table->data[] = array(get_string("dim2","sepug"),$mean_array[1],$deviation_array[1],$gmean_array[1],$gdeviation_array[1]);
+		$table->data[] = array(get_string("dim3","sepug"),$mean_array[2],$deviation_array[2],$gmean_array[2],$gdeviation_array[2]);
+		$table->data[] = array(get_string("dim4","sepug"),$mean_array[3],$deviation_array[3],$gmean_array[3],$gdeviation_array[3]);
 	}
     echo html_writer::table($table);
 }
