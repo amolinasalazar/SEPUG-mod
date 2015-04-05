@@ -70,9 +70,9 @@
         }
     }
 
-    if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
+    /*if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
-    }
+    }*/
 	
 	/* if (! $survey = $DB->get_record("sepug", array("course"=>$cid))) {
         print_error('invalidsurveyid', 'sepug');
@@ -106,8 +106,74 @@
     switch ($type) {
 
      case "question.png":
+	 
+	 // Obtenemos las categorias relacionadas con el curso
+	$main_categories = sepug_related_categories($cid);
+	
+	// Obtenemos la media del curso y grupo actual (METER GRUPO)
+	$x_data = array();
+	$mean_array = array();
+	$stats = $DB->get_records("sepug_prof_stats",array("courseid"=>$cid));
+	$result = array_pop($stats);
+	$mean_array[] = $result->mean;
+	$x_data[] = get_string("curso","sepug");
+	
+	// Localizamos si las categorias son de GRADO o POSTGRADO
+	$survey = $DB->get_record("sepug", array("sepuginstance"=>1));
+	if(!$DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
+		$grado = 0;
+	}
+	else{
+		$grado = 1;
+	}
+	
+	//$deviation_array = array();
+	// Hallamos los valores de la ultima pregunta de las encuestas en cada categoria
+	foreach($main_categories as $cat){
+		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$cat->name, "grado"=>$grado));
+		$question_max = $DB->get_record_sql("SELECT MAX(question) AS maxq FROM {sepug_global_stats} WHERE catname = '".$cat->name."' AND grado =".$grado);
+		$result = $DB->get_record("sepug_global_stats",array("question"=>(int)$question_max->maxq, "catname"=>$cat->name, "grado"=>$grado));
+		/*if($grado==1){
+			$result = $gstats[20];
+		}
+		else{
+			$result = array_pop($gstats);
+		}*/
+		$mean_array[] = $result->mean;
+		//$deviation_array[] =  $result->deviation;
+	}
+	
+	// Creamos el grafico de barras
+    $graph = new graph($SEPUG_GWIDTH,$SEPUG_GHEIGHT);
+    $graph->parameter['title'] = get_string("global_graph_title","sepug");
+	
+	
+	for ($i=0; $i<count($main_categories); $i++){
+		$x_data[] = $main_categories[$i]->name; 
+	}
 
-       $question = $DB->get_record("sepug_questions", array("id"=>$qid));
+	$graph->parameter['bar_size']    = 0.15;
+	$graph->parameter['legend']        = 'outside-top';
+	$graph->parameter['legend_border'] = 'black';
+	$graph->parameter['legend_offset'] = 4;
+	
+	$graph->parameter['legend_size'] = 12;
+	$graph->parameter['label_size'] = 12;
+	$graph->parameter['axis_size'] = 10;
+	
+	$graph->parameter['y_max_left']= 5; // valor maximo y
+	$graph->parameter['y_resolution_left']= 2; // redondeo
+	$graph->parameter['y_decimal_left']= 1; // cuantos valores decimales en y
+	$graph->parameter['x_axis_angle']  = 40; // angulo rotacion de los label de x
+	
+	$graph->x_data = $x_data;
+    $graph->y_data['mean'] = $mean_array;
+	$graph->y_format['mean'] = array('colour' => 'ltltorange', 'bar' => 'fill',
+                                            'shadow_offset' => '4', 'legend' => get_string("mean", "sepug"), 'bar_size' => 0.3);
+	$graph->y_order = array('mean');
+	$graph->draw();
+
+       /*$question = $DB->get_record("sepug_questions", array("id"=>$qid));
        $question->text = get_string($question->text, "sepug");
        $question->options = get_string($question->options, "sepug");
 
@@ -168,7 +234,7 @@
        $graph->y_tick_labels = null;
        $graph->offset_relation = null;
 
-       $graph->draw_stack();
+       $graph->draw_stack();*/
 
        break;
 

@@ -37,6 +37,11 @@
     //$id = required_param('id', PARAM_INT);    // Course Module ID
 	$cmid = required_param('cmid', PARAM_INT);    // Course Module ID
 	$cid = required_param('cid', PARAM_INT);    // Course ID
+	
+	// Ignoramos el curso 1
+	if($cid == 1){
+		print_error('notvalidcourse','sepug');
+	}
 
     if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
@@ -63,6 +68,27 @@
 	if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
     }
+	
+	// Si no esta matriculado en este curso
+    if (!is_enrolled($context)) {
+        echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
+    }
+		
+	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	foreach($roles as $rol){
+		// Si no es estudiante de este curso
+		if($rol->roleid != 5){
+			print_error('onlystudents', 'sepug');
+		}
+	}
+	
+	// Si sepug NO esta activo para alumnos
+    $checktime = time();
+    if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
+		OR ($survey->timeclosestudents < $checktime)) {
+		print_error('sepug_is_not_open', 'sepug');
+	}
 
     //add_to_log($course->id, "sepug", "submit", "view.php?id=$cm->id", "$survey->id", "$cm->id");
 

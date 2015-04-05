@@ -1,8 +1,8 @@
 <?php
 
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	ï¿½ Universidad de Granada. Granada ï¿½ 2014
+	ï¿½ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada ï¿½ 2014
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -25,14 +25,14 @@
  * Graph size
  * @global int $SURVEY_GHEIGHT
  */
-global $SURVEY_GHEIGHT;
-$SURVEY_GHEIGHT = 500;
+global $SEPUG_GHEIGHT;
+$SEPUG_GHEIGHT = 600;//600
 /**
  * Graph size
  * @global int $SURVEY_GWIDTH
  */
-global $SURVEY_GWIDTH;
-$SURVEY_GWIDTH  = 900;
+global $SEPUG_GWIDTH;
+$SEPUG_GWIDTH  = 1100;//800
 /**
  * Question Type
  * @global array $SURVEY_QTYPE
@@ -492,7 +492,7 @@ function sepug_already_done($courseid, $user) {
  * @param int $groupingid
  * @return int
  */
-function sepug_count_responses($courseid, $groupid, $groupingid) {
+function sepug_count_responses($courseid, $groupid=false, $groupingid=false) {
     if ($responses = sepug_get_responses($courseid, $groupid, $groupingid)) {
         return count($responses);
     } else {
@@ -549,7 +549,7 @@ function sepug_freq_sum_values($array_freq) {
 function sepug_freq_sum_all_values($matrix_freq) {
 	$sum = 0;
 	
-	foreach ($matriz_freq as $array_freq){
+	foreach ($matrix_freq as $array_freq){
 		$sum += sepug_freq_sum_values($array_freq);
 	}
 	
@@ -560,9 +560,34 @@ function sepug_freq_sum_all_values($matrix_freq) {
  * @param int $courseid
  */
 function sepug_get_template($courseid) {
+	global $CFG, $DB;
+	require_once($CFG->dirroot.'/lib/coursecatlib.php');
 	
-	// pendiente desarrollo
-	return 1;
+	//Obtenemos las categoria padre de postgrado
+	$survey = $DB->get_record("sepug", array("sepuginstance"=>"1"), "catposgrado");
+	
+	// Detectamos si el curso es de GRADO o de POSGRADO para saber que plantilla usar
+	// Buscamos si es de postgrado (menos busqueda), si no lo es, debe ser de grado ya que
+	// en view.php solo mostramos los cursos que pertenezcan a uno de los dos grupos
+	$cat_class = coursecat::get($survey->catposgrado);
+	$courses_cat = $cat_class->get_courses(array('recursive' => 1));
+	$posgradocourse = false;
+	if(!empty($courses_cat)){
+		foreach($courses_cat as $course_cat){
+			if($courseid == $course_cat->id){
+				$posgradocourse = true;
+			}
+		}
+	}
+	
+	if($posgradocourse){
+		$tmpid = $DB->get_record("sepug",array("sepuginstance"=>0, "catposgrado"=>1),"id");
+	}
+	else{
+		$tmpid = $DB->get_record("sepug",array("sepuginstance"=>0, "catgrado"=>1),"id");
+	}
+	
+	return $tmpid->id;
 }
 
 /**
@@ -702,14 +727,8 @@ function sepug_insert_prof_stats($courseid) {
 /** SEPUG FUNCTION (por nombre de categorias)
  * @param int $courseid
  */
-function sepug_insert_global_stats(){
-	global $DB, $CFG;
-	require_once($CFG->dirroot.'/lib/coursecatlib.php');
-	
-	// Obtenemos todas las categorias
-	if (!$categories = $DB->get_records("course_categories", array("visible"=>1))) {
-		return 1;
-	}
+function sepug_compute_results_by_categories($categories, $grado = true){
+	global $DB;
 	
 	$computed_cat = array();
 	// Por cada categoria...
@@ -720,9 +739,17 @@ function sepug_insert_global_stats(){
 			
 			$computed_cat[] = $cat->name;
 		
-			// Obtenemos todas las categorias que tengan el mismo nombre que esta
-			if (!$cat_same_name = $DB->get_records("course_categories", array("name"=>$cat->name))) {
+			
+			/*if (!$cat_same_name = $DB->get_records("course_categories", array("name"=>$cat->name))) {
 				return 1;
+			}*/
+			
+			// Obtenemos todas las categorias que tengan el mismo nombre que esta y que se encuentren en el conjunto
+			$cat_same_name = array();
+			foreach($categories as $cat2){
+				if($cat->name == $cat2->name){
+					$cat_same_name[] = $cat2;
+				}
 			}
 			
 			// Por cada categoria, buscamos recursivamente todos los cursos asociados
@@ -730,7 +757,7 @@ function sepug_insert_global_stats(){
 			foreach($cat_same_name as $cat_sm){
 				$cat_class = coursecat::get($cat_sm->id);
 				$courses = $cat_class->get_courses(array('recursive' => 1));
-				// Si tiene cursos, los añadimos a la lista
+				// Si tiene cursos, los aniadimos a la lista
 				if(!empty($courses)){
 					foreach($courses as $course){
 						if(!in_array($course->id,$courses_list)){
@@ -747,12 +774,48 @@ function sepug_insert_global_stats(){
 			if(!empty($courses_list)){
 			
 				// Obtenemos los resultados de todos los cursos por cada pregunta y calculamos media y desviacion
-				$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
+				//$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
+				
+				if($grado){
+					
+					$template = $DB->get_record("sepug",array("sepuginstance"=>0, "catgrado"=>1),"questions");
+					
+					if (!$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
+						print_error('cannotfindquestion', 'sepug');
+					}
+					
+					//$scaled_questions = 0;
+					foreach($questions as $question){
+						if($question->options == "scalenumbers5"){
+							$scaled_questions = $question->multi; 
+						}
+					}
+					
+					$questions = explode(",",$scaled_questions);
+
+				}
+				else{
+					$template = $DB->get_record("sepug",array("sepuginstance"=>0, "catposgrado"=>1),"questions");
+					
+					if (!$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
+						print_error('cannotfindquestion', 'sepug');
+					}
+					
+					//$scaled_questions = 0;
+					foreach($questions as $question){
+						if($question->options == "scalenumbers5"){
+							$scaled_questions = $question->multi; 
+						}
+					}
+					
+					$questions = explode(",",$scaled_questions);
+				}
+
 				foreach($questions as $question){
 					$mean_array=array();
 					$deviation_array=array();
 					foreach($courses_list as $cid){
-						// Si hay datos sobre esa pregunta en ese curso, los añadimos a los arrays
+						// Si hay datos sobre esa pregunta en ese curso, los aï¿½adimos a los arrays
 						if ($stat = $DB->get_record("sepug_prof_stats", array("courseid"=>$cid,"question"=>$question))) {
 							$mean_array[]=$stat->mean;
 							$deviation_array[]=$stat->deviation;
@@ -768,9 +831,15 @@ function sepug_insert_global_stats(){
 						$dev_sum += pow($dev,2);
 					}
 					$record->deviation = sqrt($dev_sum);
+					if($grado){
+						$record->grado = 1;
+					}
+					else{
+						$record->grado = 0;
+					}	
 					
 					// Insertamos datos en DB
-					if (!$global_stat = $DB->get_record("sepug_global_stats", array("question"=>$question, "catname"=>$cat->name))) {
+					if (!$global_stat = $DB->get_record("sepug_global_stats", array("question"=>$question, "catname"=>$cat->name, "grado"=>$record->grado))) {
 						$DB->insert_record("sepug_global_stats", $record);
 					}
 					else{
@@ -782,7 +851,80 @@ function sepug_insert_global_stats(){
 			}//endif
 		}
 	}
+	
+	return 0;
 }
+
+
+
+
+
+/** SEPUG FUNCTION (por nombre de categorias)
+ * @param int $courseid
+ */
+function sepug_insert_global_stats(){
+	global $DB, $CFG;
+	require_once($CFG->dirroot.'/lib/coursecatlib.php');
+	
+	// Obtenemos todas las categorias
+	/*if (!$categories = $DB->get_records("course_categories", array("visible"=>1))) {
+		return 1;
+	}*/
+	// Hallamos la instancia actual de sepug
+	$sepug = $DB->get_record("sepug", array("sepuginstance"=>1));
+	
+	// Obtenemos el conjunto de categorias de GRADO
+	$select = "path LIKE '/".$sepug->catgrado."%'";
+	$cat_grado = $DB->get_records_select("course_categories", $select, array("visible"=>1));
+	
+	sepug_compute_results_by_categories($cat_grado, true);
+	
+	// Obtenemos el conjunto de categorias de POSTGRADO
+	$select = "path LIKE '/".$sepug->catposgrado."%'";
+	$cat_posgrado = $DB->get_records_select("course_categories", $select, array("visible"=>1));
+	
+	sepug_compute_results_by_categories($cat_posgrado, false);
+	
+	// EN VEZ DE OBTENER TODAS, PIYAMOS SOLO LAS DE CAQTGRADO Y CATPOSGRADO SQL PATH /2/
+	// LUEGO ORDENAMOS ESAS CATEGORIAS EN DOS CONJUNTOS: GRADO Y EN POSGRADO
+	// obtener todas las categorias del CONJUNTO DETERMINADO con el mismo nombre
+	// aqui no tenemos en cuenta los grupos
+	// DETECTAMOS SI ES GRADO O POSG function (conjuntocat, grado/postgrado)
+	
+	return 0;
+}
+
+
+/** SEPUG FUNCTION
+
+ */
+function sepug_related_categories($cid){
+	global $DB;
+	
+	$course = $DB->get_record("course", array("id"=>$cid));
+	$main_categories = array();
+	if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
+		$parent_id = $cat_course->parent;
+		$depth = $cat_course->depth;
+		//for($i=0; $i<$depth; $i++){
+		$depthlimit = $DB->get_record("sepug", array("sepuginstance"=>1), "depthlimit");
+		for($i=0; $i<$depth; $i++){
+			$cat = $DB->get_record("course_categories", array("id"=>$cat_course->id));
+			// Solo cogemos las categorias especificadas en la configuracion
+			if($depthlimit->depthlimit >= $cat->depth){
+			//$main_categories[] = $DB->get_record("course_categories", array("id"=>$cat_course->id),"name");
+				$main_categories[] = $cat;
+			}
+			if($parent_id!=0){
+				$parent_id = $cat_course->parent;
+				$cat_course = $DB->get_record("course_categories", array("id"=>$parent_id));
+			}
+		}
+	}
+	
+	return $main_categories;
+}
+
 
 
 /** SEPUG FUNCTION
@@ -792,9 +934,10 @@ function sepug_insert_global_stats(){
  * @param array $questionorder
  * @param int $courseid
  */
-function sepug_print_frequency_table($courseid) {
+function sepug_print_frequency_table($survey, $course) {
     global $OUTPUT, $DB;
 	
+	$courseid = $course->id;
 	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
 	$table = new html_table();
 	
@@ -808,19 +951,7 @@ function sepug_print_frequency_table($courseid) {
 		//$main_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats}");
 		
 		// No quedamos solo con las categorias globales que esten relacionadas con este curso, una por nivel de profundidad
-		$course = $DB->get_record("course", array("id"=>$courseid));
-		$main_categories = array();
-		if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
-			$parent_id = $cat_course->parent;
-			$depth = $cat_course->depth;
-			for($i=0; $i<$depth; $i++){
-				$main_categories[] = $DB->get_record("course_categories", array("id"=>$cat_course->id),"name");
-				if($parent_id!=0){
-					$parent_id = $cat_course->parent;
-					$cat_course = $DB->get_record("course_categories", array("id"=>$parent_id));
-				}
-			}
-		}
+		$main_categories = sepug_related_categories($courseid);
 		
 		// Preparamos la tabla
 		$head = array("",get_string("curso","sepug"));
@@ -844,7 +975,14 @@ function sepug_print_frequency_table($courseid) {
 		$table->align = $align;
 		$table->size = $size;
 		
-		//$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
+		// Obtenemos si es GRADO/POSTGRADO
+		if(! $DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
+			$grado = false;
+		}
+		else{
+			$grado = true;
+		}
+		
 		foreach ($stats as $stat){
 			
 			$question = $DB->get_record("sepug_questions", array("id"=>$stat->question));
@@ -862,7 +1000,17 @@ function sepug_print_frequency_table($courseid) {
 			}*/
 			
 			foreach($main_categories as $cat){
-				$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name));
+				// Si la categoria pertenece a GRADO o POSTGRADO
+				$select = "path LIKE '/".$survey->catgrado."%'";
+				// NOTA: no usar record_exists_select, siempre devuelve true
+				//if($DB->record_exists_select("course_categories", $select, array("visible"=>1, "id"=>$course->category))){
+				if($grado){
+					$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name, "grado"=>1));
+				}
+				else{
+					$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name, "grado"=>0));
+				}
+				 
 				$data[] = $gstats->mean;
 				$data[] = $gstats->deviation;				
 			}
@@ -872,82 +1020,6 @@ function sepug_print_frequency_table($courseid) {
 	
     echo html_writer::table($table);
 }
-
-/** SEPUG FUNCTION
- * @param array $cm
- * @param array $results
- * @param array $questions
- * @param array $questionorder
- * @param int $courseid
- */
-/*function sepug_print_frequency_table($questions, $questionorder, $courseid) {
-    global $OUTPUT, $DB;
-	
-	echo '<div>'. get_string('porfrecuencia', 'sepug'). '</div>';
-	
-	// Preparamos la tabla
-    $table = new html_table();
-    $table->head  = array (get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"));
-    $table->align = array ("left","left","left","left","left","left","left");
-    $table->size = array ("","","","","","","");
-
-	// Recorremos todas las preguntas..
-	foreach ($questionorder as $key => $val) {
-		$question = $questions[$val];
-
-		// Si son del tipo < 0, las ignoramos
-		if ($question->type < 0) {  // We have some virtual scales.  DON'T show them.
-			continue;
-		}
-		$question->text = get_string($question->text, "sepug");
-
-		// Tipo multi, obtenemos cada una de ellas
-		if ($question->multi) {
-			//echo "<h3>$question->text:</h3>";
-
-			$subquestions = $DB->get_records_list("sepug_questions", "id", explode(',', $question->multi));
-			$subquestionorder = explode(",", $question->multi);
-			foreach ($subquestionorder as $key => $val) {
-				$subquestion = $subquestions[$val];
-				if ($subquestion->type > 0) {
-				
-					// Por cada subpregunta, calculamos la frecuencia de los resultados..
-					
-					// Obtenemos las opciones disponibles para cada pregunta y preparamos un array para almacenar las frecuencias
-					$subquestion->options = get_string($subquestion->options, "sepug");
-				    $options = explode(",",$subquestion->options);
-
-					while (list($key,) = each($options)) {
-					   $buckets1[$key] = 0;
-					   //$buckets2[$key] = 0;
-					}
-					
-					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
-					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
-					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
-					    foreach ($aaa as $aa) {
-						    //if (!$group or isset($users[$aa->userid])) {
-							   if ($a1 = $aa->answer1) {
-								   $buckets1[$a1 - 1]++;
-							   }  
-							   /*if ($a2 = $aa->answer2) {
-								   $buckets2[$a2 - 1]++;
-							   }
-						    //}
-					    }
-						// SABEMOS QUE HAY 6 ELEMENTOS, PERO DEBERIAMOS DE HACERLO AUNQUE NO LO SUPIERAMOS
-						$table->data[] = array(get_string("$subquestion->shorttext","sepug"),$buckets1[0],$buckets1[1],$buckets1[2],$buckets1[3],
-						$buckets1[4],$buckets1[5]);
-				    }else{
-						$table->data[] = array($subquestion->shorttext,"","","","","","");
-					}
-
-				}
-			}
-		} 
-	}
-    echo html_writer::table($table);
-}*/
 
 
 /** SEPUG FUNCTION
@@ -970,7 +1042,7 @@ function sepug_get_dim_results($stats, $dim) {
 	foreach($deviation_array as $dev){
 		$dev_sum += pow($dev,2);
 	}
-	$deviation = sqrt($dev_sum);
+	$deviation = round(sqrt($dev_sum),2);
 	
 	return array($mean, $deviation);
 }
@@ -978,9 +1050,10 @@ function sepug_get_dim_results($stats, $dim) {
 /** SEPUG FUNCTION
  * @param int $courseid
  */
-function sepug_print_dimension_table($courseid) {
+function sepug_print_dimension_table($survey, $course) {
     global $OUTPUT, $DB;
 	global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
+	$courseid = $course->id;
 	
 	echo '<div>'. get_string('pordimension', 'sepug'). '</div>';
 	
@@ -988,7 +1061,7 @@ function sepug_print_dimension_table($courseid) {
     $table = new html_table();
     $table->head  = array ("",get_string("curso","sepug"),get_string("universidad","sepug"));
 	$table->headspan  = array (1,2,2);
-    $table->align = array ("left","center","center");
+    $table->align = array ("left","center","center","center","center");
     $table->size = array ("","","","","");
 	$table->data[] = array(get_string("dimension","sepug"),get_string("mean","sepug"),get_string("deviation","sepug"),
 	get_string("mean","sepug"),get_string("deviation","sepug"));
@@ -1006,15 +1079,25 @@ function sepug_print_dimension_table($courseid) {
 		}
 	}
 	
-	// Obtenemos resultados de la BD
-	if (!$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid)) || 
-	!$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name))) {
+	// Obtenemos resultados de la BD (aunque no hace falta ya que estamos escogiendo la categoria padre 
+	// que no debe estar duplicada en la BD, incluimos en los parametros si es de GRADO/POSTGRADO)
+	$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
+	if(!$DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>0));
+	}
+	else{
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>1));
+	}
+	
+	if (!$stats || !$gstats) {
 		return 1;
 	}
 	else{
 		
-		$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
-		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name));
+		//$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
+		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name));
+		//$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
+		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>));
 		
 		// Por cada dimension, obtenemos la media y desviacion
 		$mean_array = array();
@@ -1039,8 +1122,53 @@ function sepug_print_dimension_table($courseid) {
 		$table->data[] = array(get_string("dim2","sepug"),$mean_array[1],$deviation_array[1],$gmean_array[1],$gdeviation_array[1]);
 		$table->data[] = array(get_string("dim3","sepug"),$mean_array[2],$deviation_array[2],$gmean_array[2],$gdeviation_array[2]);
 		$table->data[] = array(get_string("dim4","sepug"),$mean_array[3],$deviation_array[3],$gmean_array[3],$gdeviation_array[3]);
+
 	}
+
     echo html_writer::table($table);
+}
+
+
+/**
+ * @global object
+ * @param int $templateid
+ * @return string
+ */
+function sepug_print_global_results_graph($url){
+	global $CFG, $SEPUG_GHEIGHT, $SEPUG_GWIDTH;
+	//require_once("$CFG->libdir/graphlib.php");
+	
+	
+	// Obtenemos las categorias relacionadas con el curso
+	/*$main_categories = sepug_related_categories(2);
+	
+	$mean_array = array();
+	$deviation_array = array();
+	// Hallamos los valores de la ultima pregunta de las encuestas en cada categoria
+	foreach($main_categories as $cat){
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$cat->name));
+		$result = array_pop($gstats);
+		$mean_array[] = $result->mean;
+		$deviation_array[] =  $result->deviation;
+	}
+	
+	$x_data = array();
+	for ($i=0; $i<count($main_categories); $i++){
+		$x_data[] = $main_categories[$i]->name; 
+	}
+	
+	// PRUEBAS
+    print "<div style=\"border:5px solid red;\">";
+    print " PRUEBA var dump <br />\n";
+    print "<pre>";
+    var_dump($x_data);
+    print "</pre></div>";*/
+	
+	
+		 
+	echo "<img class='resultgraph' align=\"middle\" height=\"$SEPUG_GHEIGHT\" width=\"$SEPUG_GWIDTH\"".
+         " src=\"$CFG->wwwroot/mod/sepug/graph.php?$url\" alt=\"".get_string("sepuggraph", "sepug")."\" />"; 
+	
 }
 
 /**
@@ -1220,7 +1348,7 @@ function sepug_print_single($question) {
 
     } else if ($question->type > 0) {     // Choose one of a number
 		
-		// Añadimos pregunta al array checklist, para poder confirmar en view.php y sepug.js que la pregunta ha sido contestada
+		// Aniadimos pregunta al array checklist, para poder confirmar en view.php y sepug.js que la pregunta ha sido contestada
 		$checklist["q$question->id"] = 0;
 		
         $strchoose = get_string("choose");
@@ -1263,10 +1391,10 @@ function sepug_question_rowclass($qnum) {
  * @param string $url
  */
 function sepug_print_graph($url) {
-    global $CFG, $SURVEY_GHEIGHT, $SURVEY_GWIDTH;
+    global $CFG, $SEPUG_GHEIGHT, $SEPUG_GWIDTH;
 
     echo "<img class='resultgraph' height=\"$SURVEY_GHEIGHT\" width=\"$SURVEY_GWIDTH\"".
-         " src=\"$CFG->wwwroot/mod/sepug/graph.php?$url\" alt=\"".get_string("surveygraph", "sepug")."\" />";
+         " src=\"$CFG->wwwroot/mod/sepug/graph.php?$url\" alt=\"".get_string("surveygraph", "sepug")."\" />"; 
 }
 
 /**

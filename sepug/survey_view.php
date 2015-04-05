@@ -28,6 +28,11 @@
 
     $cmid = required_param('cmid', PARAM_INT);    // Course Module ID
 	$cid = required_param('cid', PARAM_INT);    // Course ID
+	
+	// Ignoramos el curso 1
+	if($cid == 1){
+		print_error('notvalidcourse','sepug');
+	}
 
     if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
@@ -56,6 +61,14 @@
         print_error('invalidsurveyid', 'sepug');
     }
 	
+	// Si sepug NO esta activo para alumnos
+    $checktime = time();
+    if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
+		OR ($survey->timeclosestudents < $checktime)) {
+		print_error('sepug_is_not_open', 'sepug');
+	}
+	
+	// Obtenemos el template adecuado (GRADO o POSTGRADO)
     $trimmedintro = trim($survey->intro);
 	$tmpid = sepug_get_template($cid);
     if (empty($trimmedintro)) {
@@ -82,30 +95,39 @@ $completion->set_module_viewed($cm);*/
     echo $OUTPUT->header();
 
 /// Check to see if groups are being used in this survey
-    if ($groupmode = groups_get_activity_groupmode($cm)) {   // Groups are being used
+    /*if ($groupmode = groups_get_activity_groupmode($cm)) {   // Groups are being used
         $currentgroup = groups_get_activity_group($cm);
     } else {
         $currentgroup = 0;
     }
-    $groupingid = $cm->groupingid;
+    $groupingid = $cm->groupingid;*/
 
-    if (has_capability('mod/sepug:readresponses', $context) or ($groupmode == VISIBLEGROUPS)) {
+    /*if (has_capability('mod/sepug:readresponses', $context) or ($groupmode == VISIBLEGROUPS)) {
         $currentgroup = 0;
-    }
+    }*/
 
 	//$currentgroup = 0;
-    if (has_capability('mod/sepug:readresponses', $context)) {
+    /*if (has_capability('mod/sepug:readresponses', $context)) {
         $numusers = sepug_count_responses($survey->id, $currentgroup, $groupingid);
         echo "<div class=\"reportlink\"><a href=\"report.php?id=$cm->id\">". // PENDIENTE DE CAMBIAR
               get_string("viewsurveyresponses", "sepug", $numusers)."</a></div>";
     } else if (!$cm->visible) {
         notice(get_string("activityiscurrentlyhidden"));
-    }
+    }*/
 
+	// Si no esta matriculado en este curso
     if (!is_enrolled($context)) {
         echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
     }
-
+		
+	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	foreach($roles as $rol){
+		// Si no es estudiante de este curso
+		if($rol->roleid != 5){
+			print_error('onlystudents', 'sepug');
+		}
+	}
 
 //  Check the survey hasn't already been filled out.
 
@@ -114,9 +136,12 @@ $completion->set_module_viewed($cm);*/
 
         //add_to_log($course->id, "sepug", "view graph", "view.php?id=$cm->id", $survey->id, $cm->id);
         //$numusers = survey_count_responses($survey->id, $currentgroup, $groupingid);
-		$numusers = survey_count_responses($cid, $currentgroup, $groupingid);
+		//$numusers = survey_count_responses($cid, $currentgroup, $groupingid);
+		//$numusers = survey_count_responses($cid);
+		
+		print_error("surveycompleted", "sepug");
 
-        if ($showscales) {
+        /*if ($showscales) {
             echo $OUTPUT->heading(get_string("surveycompleted", "sepug"));
             echo $OUTPUT->heading(get_string("peoplecompleted", "sepug", $numusers));
             echo '<div class="resultgraph">';
@@ -144,7 +169,7 @@ $completion->set_module_viewed($cm);*/
                     }
                 }
             }
-        }
+        }*/
 
         echo $OUTPUT->footer();
         exit;
@@ -162,10 +187,6 @@ $completion->set_module_viewed($cm);*/
     echo $OUTPUT->box(format_module_intro('sepug', $survey, $cm->id), 'generalbox boxaligncenter bowidthnormal', 'intro');
     echo '<div>'. get_string('allquestionrequireanswer', 'sepug'). '</div>';
 
-// Get all the major questions and their proper order
-    /*if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions))) {
-        print_error('cannotfindquestion', 'sepug');
-    }*/
 	// Obtenemos las preguntas de las plantillas y no de la instanciacion del survey
 	if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
         print_error('cannotfindquestion', 'sepug');

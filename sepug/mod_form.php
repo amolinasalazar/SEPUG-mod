@@ -24,25 +24,21 @@ class mod_sepug_mod_form extends moodleform_mod {
 
     function definition() {
         global $CFG, $DB;
+		
+		$update  = optional_param('update', '0', PARAM_INT);
 
         $mform =& $this->_form;
 		
         $strrequired = get_string('required');
 		
-		// Comprobar que no hay un cuestionario previamente creado en Moodle
-		/*if (!$options = $DB->get_records_menu("sepug", array("template"=>0), "name", "id, name")) {
-            print_error('cannotfindsurveytmpt', 'sepug');
-		}*/
+		// Comprobar que no hay una instancia SEPUG previamente creada en Moodle
+		if ($DB->record_exists("sepug", array("id"=>3)) && $update==0) {
+			print_error('sepug_already_created', 'sepug');
+		}
 		
-		// Si no se esta creando en el curso con id=1, error
-		/*if (!$options = $DB->get_records_menu("sepug", array("template"=>0), "name", "id, name")) {
-            print_error('cannotfindsurveytmpt', 'sepug');
-		}*/
-		
-		
-		
-		
-		
+		// Activamos el campo "instance" que ratifica que esa entrada es una instancia
+		$mform->addElement('hidden', 'sepuginstance', '1');
+		$mform->setType('sepuginstance', PARAM_INT);
 
 		//-------------------------------------------------------------------------------
 		// GENERAL
@@ -92,6 +88,38 @@ class mod_sepug_mod_form extends moodleform_mod {
         $mform->addElement('date_time_selector', 'timeclose', get_string('sepugclose', 'sepug'),
             array('optional' => false));
 		$mform->addHelpButton('timeclose', 'sepugclose', 'sepug');
+		
+		//-------------------------------------------------------------------------------
+		// CONFIGURACION
+        $mform->addElement('header', 'config', get_string('config', 'sepug'));
+	
+		// Obtenemos el nivel maximo de profundidad de las categorias
+		$maxdepth = $DB->get_record_sql('SELECT MAX(depth) AS maxdepth FROM {course_categories}');    
+		
+		$options = array();
+		for($i=1; $i<=$maxdepth->maxdepth; $i++){
+			$options[$i] = get_string("level", "sepug")." ".$i;
+		}
+
+        $mform->addElement('select', 'depthlimit', get_string("depth_limit", "sepug"), $options);
+		$mform->addHelpButton('depthlimit', 'depth_limit', 'sepug');
+		
+		// Obtenemos los nombres de las categorias de primer nivel
+		$firstdepthcat = $DB->get_records("course_categories", array("depth"=>1));
+		
+		$options = array();
+		foreach($firstdepthcat as $cat){
+			$options[$cat->id] = $cat->name;
+		}
+		
+		// Selector categoria de grado
+		$mform->addElement('select', 'catgrado', get_string("catgrado", "sepug"), $options);
+		$mform->addHelpButton('catgrado', 'catgrado', 'sepug');
+		
+		// Selector categoria de posgrado
+		$mform->addElement('select', 'catposgrado', get_string("catposgrado", "sepug"), $options);
+		$mform->addHelpButton('catposgrado', 'catposgrado', 'sepug');
+		
 		
 		//-------------------------------------------------------------------------------
 		// aniadir descripcion 

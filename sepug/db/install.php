@@ -10,8 +10,8 @@ function xmldb_sepug_install() {
 
 /// insert survey data
     $records = array(
-		array_combine(array('course', 'template', 'days', 'timecreated', 'timemodified', 'name', 'intro', 'questions', 'timeopen','timeclosestudents', 'timeclose'), array(0, 0, 0, 985017600, 985017600, 'coldp15name', 'coldp15_intro', '27,21,22,23,24,25,26', 0, 0, 0)),
-		array_combine(array('course', 'template', 'days', 'timecreated', 'timemodified', 'name', 'intro', 'questions','timeopen','timeclosestudents','timeclose'), array(0, 0, 0, 985017600, 985017600, 'coldp15name_postgrado', 'coldp15_intro', '28,21,22,23,24,25,26', 0, 0, 0)),
+		array_combine(array('course', 'template', 'days', 'timecreated', 'timemodified', 'name', 'intro', 'questions', 'timeopen','timeclosestudents', 'timeclose','catgrado','catposgrado'), array(0, 0, 0, 985017600, 985017600, 'coldp15name', 'coldp15_intro', '27,21,22,23,24,25,26', 0, 0, 0, 1, 0)),
+		array_combine(array('course', 'template', 'days', 'timecreated', 'timemodified', 'name', 'intro', 'questions','timeopen','timeclosestudents','timeclose','catgrado','catposgrado'), array(0, 0, 0, 985017600, 985017600, 'coldp15name_postgrado', 'coldp15_intro', '28,21,22,23,24,25,26', 0, 0, 0, 0, 1)),
     );
     foreach ($records as $record) {
         $DB->insert_record('sepug', $record, false);

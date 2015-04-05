@@ -25,47 +25,88 @@
  */
 
 require_once ("../../config.php");
+require_once("lib.php");
 
 // Check that all the parameters have been provided.
-
-$id    = required_param('id', PARAM_INT);    // Course Module ID
+//$id    = required_param('id', PARAM_INT);    // Course Module ID
+$cmid = required_param('cmid', PARAM_INT);    // Course Module ID
+$cid = required_param('cid', PARAM_INT);    // Course ID
 $type  = optional_param('type', 'xls', PARAM_ALPHA);
 $group = optional_param('group', 0, PARAM_INT);
 
-if (! $cm = get_coursemodule_from_id('sepug', $id)) {
+// Ignoramos el curso 1
+if($cid == 1){
+	print_error('notvalidcourse','sepug');
+}
+
+/*if (! $cm = get_coursemodule_from_id('sepug', $id)) {
+    print_error('invalidcoursemodule');
+}*/
+
+if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
     print_error('invalidcoursemodule');
 }
 
-if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
+/*if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
+    print_error('coursemisconf');
+}*/
+
+if (! $course = $DB->get_record("course", array("id"=>$cid))) {
     print_error('coursemisconf');
 }
 
-$context = context_module::instance($cm->id);
+$context = context_course::instance($course->id);
+//$context = context_module::instance($cm->id);
 
-$PAGE->set_url('/mod/sepug/download.php', array('id'=>$id, 'type'=>$type, 'group'=>$group));
+$PAGE->set_url('/mod/sepug/download.php', array('cmid'=>$cmid, 'type'=>$type, 'group'=>$group));
 
-require_login($course, false, $cm);
+require_login($course);
+//require_login($course, false, $cm);
 require_capability('mod/sepug:download', $context) ;
 
+/*if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
+    print_error('invalidsurveyid', 'sepug');
+}*/
 if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
     print_error('invalidsurveyid', 'sepug');
 }
 
-add_to_log($course->id, "sepug", "download", $PAGE->url->out(), "$survey->id", $cm->id);
+// Si no esta matriculado en este curso
+if (!is_enrolled($context)) {
+	echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
+}
+	
+// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+foreach($roles as $rol){
+	// Si no es profesor de este curso
+	if($rol->roleid != 3){
+		print_error('onlyprof', 'sepug');
+	}
+}
+
+// Si sepug NO esta activo para profesores
+$checktime = time();
+if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
+	OR ($survey->timeclosestudents > $checktime)) {
+	print_error('sepug_is_not_open', 'sepug');
+}
+
+//add_to_log($course->id, "sepug", "download", $PAGE->url->out(), "$survey->id", $cm->id);
 
 /// Check to see if groups are being used in this survey
 
-$groupmode = groups_get_activity_groupmode($cm);   // Groups are being used
+//$groupmode = groups_get_activity_groupmode($cm);   // Groups are being used
 
-if ($groupmode and $group) {
+/*if ($groupmode and $group) {
     $users = get_users_by_capability($context, 'mod/sepug:participate', '', '', '', '', $group, null, false);
 } else {
     $users = get_users_by_capability($context, 'mod/sepug:participate', '', '', '', '', '', null, false);
     $group = false;
-}
+}*/
 
 // The order of the questions
-$order = explode(",", $survey->questions);
+/*$order = explode(",", $survey->questions);
 
 // Get the actual questions from the database
 $questions = $DB->get_records_list("sepug_questions", "id", $order);
@@ -143,15 +184,204 @@ foreach ($surveyanswers as $surveyanswer) {
         $results[$surveyanswer->userid][$questionid]['answer1'] = $surveyanswer->answer1;
         $results[$surveyanswer->userid][$questionid]['answer2'] = $surveyanswer->answer2;
     }
-}
+}*/
 
 // Output the file as a valid ODS spreadsheet if required
-$coursecontext = context_course::instance($course->id);
-$courseshortname = format_string($course->shortname, true, array('context' => $coursecontext));
+//$coursecontext = context_course::instance($course->id);
+//$courseshortname = format_string($course->shortname, true, array('context' => $coursecontext));
+$courseshortname = format_string($course->shortname, true, array('context' => $context));
 
 if ($type == "ods") {
     require_once("$CFG->libdir/odslib.class.php");
 
+	/// Calculate file name
+    $downloadfilename = clean_filename(strip_tags($courseshortname.' '.format_string($survey->name, true))).'.ods';
+/// Creating a workbook
+    $workbook = new MoodleODSWorkbook("-");
+/// Sending HTTP headers
+    $workbook->send($downloadfilename);
+/// Creating the first worksheet
+    $myxls = $workbook->add_worksheet(textlib::substr(strip_tags(format_string($survey->name,true)), 0, 31));
+
+	// Escribimos una etiqueta por cada grupo que haya en la asignatura
+    $info_header = array("Asignatura","Grupo","Alumnos Encuestados");
+	$info_data = array($course->fullname,"",(string)sepug_count_responses($cid));
+    $col=0;
+    for($i=0; $i<3; $i++) {
+        $myxls->write_string(0,$i,$info_header[$i]);
+		$myxls->write_string(1,$i,$info_data[$i]);
+    }
+
+	// Imprimimos la tabla de frecuencias
+	// sepug_print_frequency_table
+	$courseid = $course->id;
+	
+	// Obtenemos resultados de la BD
+	if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+		
+		// Obtenemos las frecuencias de los resultados
+		$frequencies = sepug_frequency_values($courseid);
+		
+		// Nos quedamos solo con las categorias globales que esten relacionadas con este curso, una por nivel de profundidad
+		$main_categories = sepug_related_categories($courseid);
+		
+		// Preparamos los arrays para insertar las cabeceras
+		$header1 = array("Tabla de Frequencias","","","","","","",get_string("curso","sepug"),"");
+		$header2 = array(get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
+		get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
+		get_string("mean", "sepug"), get_string("deviation", "sepug"));
+		foreach($main_categories as $cat){
+			array_push($header1,$cat->name,"");
+			array_push($header2, get_string("mean", "sepug"), get_string("deviation", "sepug"));
+		}
+
+		for($i=0; $i<count($header1); $i++) {
+			$myxls->write_string(3,$i,$header1[$i]);
+			$myxls->write_string(4,$i,$header2[$i]);
+		}
+		
+		// Averiguamos si es de GRADO/POSTGRADO
+		if(! $DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
+			$grado = false;
+		}
+		else{
+			$grado = true;
+		}
+		
+		$row = 5;
+		foreach ($stats as $stat){
+			
+			$question = $DB->get_record("sepug_questions", array("id"=>$stat->question));
+			
+			$data = array(get_string("$question->shorttext","sepug"), $frequencies[$stat->question][0], $frequencies[$stat->question][1], 
+			$frequencies[$stat->question][2], $frequencies[$stat->question][3], $frequencies[$stat->question][4], $frequencies[$stat->question][5], 
+			$stat->mean, $stat->deviation);	
+			
+			foreach($main_categories as $cat){
+				// Si la categoria pertenece a GRADO o POSTGRADO
+				$select = "path LIKE '/".$survey->catgrado."%'";
+				// NOTA: no usar record_exists_select, siempre devuelve true
+				//if($DB->record_exists_select("course_categories", $select, array("visible"=>1, "id"=>$course->category))){
+				if($grado){
+					$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name, "grado"=>1));
+				}
+				else{
+					$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name, "grado"=>0));
+				}
+				 
+				$data[] = $gstats->mean;
+				$data[] = $gstats->deviation;				
+			}
+			
+			for($i=0; $i<count($data); $i++){
+				$myxls->write_string($row,$i,$data[$i]);
+			}
+			$row++;
+		}	
+	}
+	
+	// Imprimimos la tabla de dimensiones
+	// sepug_print_dimension_table
+	global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
+	
+	// Preparamos los arrays para insertar las cabeceras
+    $header1  = array("Tabla de Resultados segun Dimension",get_string("curso","sepug"),"",get_string("universidad","sepug"),"");
+	$header2 = array(get_string("dimension","sepug"),get_string("mean","sepug"),get_string("deviation","sepug"),
+	get_string("mean","sepug"),get_string("deviation","sepug"));
+	
+	$row++; //separamos ambas tablas
+	for($i=0; $i<count($header1); $i++) {
+		$myxls->write_string($row,$i,$header1[$i]);
+		$myxls->write_string($row+1,$i,$header2[$i]);
+	}
+	
+	// Obtenemos la categoria padre a nivel 1 de profundidad del curso
+	if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
+		// Si el parent es 0, la categoria ya esta a nivel 1
+		if($cat_course->parent != 0){
+			$parent_id = $cat_course->path[1];
+			$parent_cat = $DB->get_record("course_categories", array("id"=>$parent_id),"name");
+		}
+		else{
+			$parent_cat = $cat_course;
+		}
+	}
+
+	if($grado){
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>1));
+	}
+	else{
+		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>0));
+	}
+	
+	if (!$stats || !$gstats) {
+		return 1;
+	}
+	else{
+		
+		// Por cada dimension, obtenemos la media y desviacion
+		$mean_array = array();
+		$deviation_array = array();
+		$gmean_array = array();
+		$gdeviation_array = array();
+		
+		// Valores por curso
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_PLANIF);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_COMP_DOC);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_EV_APREND);
+		list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_AMB);
+		
+		// Valores globales
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_PLANIF);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_COMP_DOC);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_EV_APREND);
+		list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_AMB);
+		
+		//$data = array($mean_array[],$deviation_array[],$gmean_array[],$gdeviation_array[]);
+		// Escribimos los resultados en el fichero
+		$row = $row+2;
+		for($i=0; $i<count($mean_array); $i++) {
+			$dim = "dim".($i+1);
+			$data = array(get_string($dim,"sepug"),$mean_array[$i],$deviation_array[$i],$gmean_array[$i],$gdeviation_array[$i]);
+			$myxls->write_string($row,0,$data[0]);
+			$myxls->write_string($row,1,$data[1]);
+			$myxls->write_string($row,2,$data[2]);
+			$myxls->write_string($row,3,$data[3]);
+			$myxls->write_string($row,4,$data[4]);
+			$row++;
+		}
+	}
+	
+   
+   
+   
+   
+   
+    $workbook->close();
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	/*
 /// Calculate file name
     $downloadfilename = clean_filename(strip_tags($courseshortname.' '.format_string($survey->name, true))).'.ods';
 /// Creating a workbook
@@ -218,7 +448,7 @@ if ($type == "ods") {
         }
     }
     $workbook->close();
-
+*/
     exit;
 }
 

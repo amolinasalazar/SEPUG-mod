@@ -60,7 +60,7 @@ $string['modulename_link'] = 'mod/sepug/view';
 $string['modulenameplural'] = 'Surveys';
 $string['name'] = 'Name';
 $string['newsurveyresponses'] = 'Nuevas respuestas';
-$string['nobodyyet'] = 'Nobody has yet completed this survey';
+$string['nobodyyet'] = 'Nadie ha contestado todav&iacute;a esta encuesta.';
 $string['notdone'] = 'Not done yet';
 $string['notes'] = 'Your private analysis and notes';
 $string['othercomments'] = 'Do you have any other comments?';
@@ -84,9 +84,9 @@ $string['scaletimes5'] = 'Almost never,Seldom,Sometimes,Often,Almost always';
 $string['seemoredetail'] = 'Click here to see more detail';
 $string['selectedquestions'] = 'Selected questions from a scale, all students';
 $string['sepug:addinstance'] = 'Add a new survey';
-$string['surveycompleted'] = 'Ya has completado este cuestionario.  The graph below shows a summary of your results compared to the class averages.';
+$string['surveycompleted'] = 'Ya has completado este cuestionario.';
 $string['sepug:download'] = 'Download responses';
-$string['surveygraph'] = 'Survey graph';
+$string['sepuggraph'] = 'Sepug graph';
 $string['surveyname'] = 'Survey name';
 $string['sepug:participate'] = 'Respond to survey';
 $string['sepug:readresponses'] = 'View responses';
@@ -118,6 +118,11 @@ $string['sepugclosestudents_help'] = 'Es obligatorio programar una fecha para de
 $string['sepugclose'] = 'Cerrar acceso y eliminar resultados obtenidos';
 $string['sepugclose_help'] = 'Es obligatorio programar una fecha para cerrar definitivamente el acceso al cuestionario. Al realizar dicha acci&oacute;n, se proceder&aacute; a la eliminaci&oacute;n de todos los datos almacenados en la base de datos. Se recomienda fijar un margen de tiempo prudente para que los resultados puedan ser visualizados.';
 
+$string['onlystudents'] = 'Solo los estudiantes del curso (sin otro tipo de rol) pueden contestar cuestionarios.';
+$string['onlyprof'] = 'Solo los profesores del curso pueden visualizar los resultados.';
+$string['notvalidcourse'] = 'Curso no v&aacute;lido.';
+
+
 $string['sepug_is_not_open'] = 'Esta actividad se encuentra en estos momentos cerrada.';
 $string['sepug_close_for_students'] = 'El periodo de apertura para completar cuestionarios ha finalizado.';
 $string['sepug_not_allowed'] = 'Solo alumnos o profesores pueden usar este modulo.';
@@ -134,13 +139,22 @@ $string['all_surveys_are_done'] = 'Ya ha completado todos los cuestionarios disp
 $string['show_results'] = 'Visualizar resultados por cursos';
 $string['access_surveys'] = 'Acceder a los cuestionarios';
 
-
-
+$string['global_graph_title'] = 'Gr&aacute;fico de Valoraci&oacute;n Global';
+$string['sepug_already_created'] = 'Una instancia de SEPUG ya ha sido creada. Elim&iacute;nela y vuelva a intentarlo.';
+$string['level'] = 'Nivel';
+$string['depth_limit'] = 'Nivel de profundidad';
+$string['depth_limit_help'] = 'Se permite seleccionar el nivel de profundidad m&aacute;ximo de las categor&iacute;as que se quieren explorar. El valor seleccionado es INCLUSIVE, siendo el NIVEL 1 el nivel m&iacute;nimo. Por ejemplo, seleccionando NIVEL 3, se mostraran en los informes de resultados todas las categor&iacute;as relacionadas con el curso en cuestion hasta el nivel 3 de profundidad, dejando fuera del informe los resultados de los dem&aacute;s niveles.';
+$string['config'] = 'Configuraci&oacute;n';
+$string['catgrado'] = 'Categor&iacute;a de grado del peri&oacute;do lectivo actual';
+$string['catgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las enseñanzas de grado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser GRADO 14/15.';
+$string['catposgrado'] = 'Categor&iacute;a de postgrado del peri&oacute;do lectivo actual';
+$string['catposgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las enseñanzas de postgrado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser POSTGRADO 14/15.';
 
 
 $string['summary'] = 'Informe resultados';
 $string['summarytext1'] = 'Informe de calidad de la actividad docente';
 $string['summarytext2'] = 'M&oacute;dulo/asignatura: {$a}';
+$string['summarytext3'] = 'Alumnos encuestados: {$a}';
 $string['porfrecuencia'] = 'Tabla de Frecuencia de Respuestas';
 $string['pordimension'] = 'Tabla de Resultados seg&uacute;n Dimensi&oacute;n';
 $string['dimension'] = 'Dimensi&oacute;n';
@@ -179,7 +193,7 @@ $string['scalenumbers5'] = 'NS,1,2,3,4,5';
 $string['coldp15m'] = 'Preguntas para el alumnado de Grado';
 $string['coldp15m_postgrado'] = 'Preguntas para el alumnado de Postgrado';
 $string['coldp15mshort'] = 'Grado';
-$string['coldp15mshort'] = 'Postrado';
+$string['coldp15mshort_postgrado'] = 'Postrado';
 $string['coldp15name'] = 'Cuestionario de Opini&oacute;n sobre la Labor Docente del Profesorado (GRADO)';
 $string['coldp15name_postgrado'] = 'Cuestionario de Opini&oacute;n sobre la Labor Docente del Profesorado (POSTGRADO)';
 $string['coldp15_intro'] = 'A continuaci&oacute;n le presentamos una serie de cuestiones relativas a la docencia de <b>este/a profesor/a</b> en <b>esta asignatura o m&oacute;dulo</b>. Su colaboraci&oacute;n es necesaria y consiste en se&ntilde;alar en la escala de respuesta su grado de acuerdo con cada una de las afirmaciones, teniendo en cuenta que <b>"1"</b> significa <b>"el menor grado de acuerdo"</b> y <b>"5" "el menor grado de acuerdo"</b>.

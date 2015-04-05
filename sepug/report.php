@@ -1,8 +1,8 @@
 <?php
 
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	ï¿½ Universidad de Granada. Granada ï¿½ 2014
+	ï¿½ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada ï¿½ 2014
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -39,6 +39,11 @@
     $qids = explode(',', $qid);
     $qids = clean_param_array($qids, PARAM_INT);
     $qid = implode (',', $qids);
+	
+	// Ignoramos el curso 1
+	if($cid == 1){
+		print_error('notvalidcourse','sepug');
+	}
 
     if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
@@ -76,6 +81,27 @@
     if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
     }
+	
+	// Si no esta matriculado en este curso
+    if (!is_enrolled($context)) {
+        echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
+    }
+		
+	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	foreach($roles as $rol){
+		// Si no es profesor de este curso
+		if($rol->roleid != 3){
+			print_error('onlyprof', 'sepug');
+		}
+	}
+	
+	// Si sepug NO esta activo para profesores
+    $checktime = time();
+    if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
+		OR ($survey->timeclosestudents > $checktime)) {
+		print_error('sepug_is_not_open', 'sepug');
+	}
 
     /*if (! $template = $DB->get_record("sepug", array("id"=>$survey->template))) {
         print_error('invalidtmptid', 'sepug');
@@ -110,10 +136,10 @@
             break;
         case 'summary':
         case 'scales':
-        case 'questions':
+        /*case 'questions':
             $PAGE->navbar->add($strreport);
             $PAGE->navbar->add(${'str'.$action});
-            break;
+            break;*/
         /*case 'students':
             $PAGE->navbar->add($strreport);
             $PAGE->navbar->add(get_string('participants'));
@@ -159,7 +185,7 @@
 		echo "<a href=\"report.php?action=summary&amp;cmid=$cmid&amp;cid=$cid\">$strsummary</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=scales&amp;id=$id\">$strscales</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;id=$id\">$strquestions</a>";
-		echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;cmid=$cmid&amp;cid=$cid\">$strquestions</a>";
+		//echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=questions&amp;cmid=$cmid&amp;cid=$cid\">$strquestions</a>";
         //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=students&amp;id=$id\">".get_string('participants')."</a>";
         if (has_capability('mod/sepug:download', $context)) {
             //echo "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"report.php?action=download&amp;id=$id\">$strdownload</a>";
@@ -191,10 +217,13 @@
 
     switch ($action) {
 
-	// Aqui carga la pestaña RESUMEN
+	// Aqui carga la pestaï¿½a RESUMEN
       case "summary":
-        echo $OUTPUT->heading(get_string("summarytext1", "sepug", ""));
-		echo $OUTPUT->heading(get_string("summarytext2", "sepug", $course->fullname));
+        echo $OUTPUT->heading(get_string("summarytext1", "sepug"),1);
+		
+		//$string = get_string("summarytext2", "sepug", $course->fullname).", ".get_string("summarytext3", "sepug", sepug_count_responses($cid));
+		echo "<h3>".get_string("summarytext2", "sepug", $course->fullname)."</h3>";
+		echo "<h3>".get_string("summarytext3", "sepug", sepug_count_responses($cid))."</h3></br></br>";
 		
 		// aqui habra que comprobar si el periodo del COLDP ha finalizado, en vez de que si hay alguna respuesta
 		 //if (! $results = sepug_get_responses($survey->id, $currentgroup, $groupingid) ) {
@@ -217,15 +246,16 @@
 			// COMPROBAR QUE HAY RESULTADOS
 			sepug_insert_prof_stats($cid);
 			sepug_insert_global_stats();
-			sepug_print_frequency_table($cid);
+			sepug_print_frequency_table($survey,$course);
             echo "<br/>";
-			sepug_print_dimension_table($cid);
+			sepug_print_dimension_table($survey,$course);
+			echo "<br/>";
+			sepug_print_global_results_graph("cid=$cid&amp;type=question.png");
 			
 			
         }
 
         break;
-		
 		
 		
 		
@@ -264,7 +294,7 @@
 
         break;
 		*/
-
+/*
       case "questions":
 
 		// Segun si solo se quiere mostrar un grupo de preguntas por tema o todas..
@@ -358,7 +388,7 @@
         }
 
         break;
-
+*/
 			/*
       case "question":
         if (!$question = $DB->get_record("sepug_questions", array("id"=>$qid))) {
@@ -530,9 +560,9 @@
 
         echo $OUTPUT->container_start('reportbuttons');
         $options = array();
-        //$options["id"] = "$cm->id";
-		$options["cmid"] = "$cmid";
-        $options["group"] = $currentgroup;
+        $options["cid"] = $cid;
+		$options["cmid"] = $cmid;
+        //$options["group"] = $currentgroup;
 
         $options["type"] = "ods";
         echo $OUTPUT->single_button(new moodle_url("download.php", $options), get_string("downloadods"));
