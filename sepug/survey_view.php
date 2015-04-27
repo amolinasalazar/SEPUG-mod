@@ -25,9 +25,13 @@
  
     require_once("../../config.php");
     require_once("lib.php");
+	require_once('classes/surveygroupselect_form.php');
+	
+	global $FILTRO_CURSOS;
 
     $cmid = required_param('cmid', PARAM_INT);    // Course Module ID
 	$cid = required_param('cid', PARAM_INT);    // Course ID
+	$group = optional_param('group', 0, PARAM_INT); // Group ID
 	
 	// Ignoramos el curso 1
 	if($cid == 1){
@@ -37,11 +41,6 @@
     if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
     }
-
-    /*if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
-        print_error('coursemisconf');
-    }*/
-	
 	
 	if (! $course = $DB->get_record("course", array("id"=>$cid))) {
         print_error('coursemisconf');
@@ -49,14 +48,10 @@
 	
     $PAGE->set_url('/mod/sepug/survey_view.php', array('cmid'=>$cmid, 'cid'=>$cid));
     require_login($course);
-    //$context = context_module::instance($cm->id);
 	$context = context_course::instance($course->id);
 
     require_capability('mod/sepug:participate', $context);
 
-    /*if (! $survey = $DB->get_record("sepug", array("course"=>$cid))) {
-        print_error('invalidsurveyid', 'sepug');
-    }*/
 	if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
     }
@@ -64,7 +59,7 @@
 	// Si sepug NO esta activo para alumnos
     $checktime = time();
     if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
-		OR ($survey->timeclosestudents < $checktime)) {
+		OR ($survey->timeclosestudents < $checktime)){
 		print_error('sepug_is_not_open', 'sepug');
 	}
 	
@@ -77,15 +72,10 @@
         $survey->intro = get_string($tempo, "sepug");
     }
 	
-	// Obtenemos plantilla segun el curso en el que este (de momento siempre 1)
+	// Obtenemos plantilla segun el curso en el que este
     if (! $template = $DB->get_record("sepug", array("id"=>$tmpid))) {
         print_error('invalidtmptid', 'sepug');
     }
-
-// Update 'viewed' state if required by completion system
-/*require_once($CFG->libdir . '/completionlib.php');
-$completion = new completion_info($course);
-$completion->set_module_viewed($cm);*/
 
     $showscales = ($template->name != 'ciqname');
 
@@ -93,27 +83,6 @@ $completion->set_module_viewed($cm);*/
     $PAGE->set_title($survey->name);
     $PAGE->set_heading($course->fullname);
     echo $OUTPUT->header();
-
-/// Check to see if groups are being used in this survey
-    /*if ($groupmode = groups_get_activity_groupmode($cm)) {   // Groups are being used
-        $currentgroup = groups_get_activity_group($cm);
-    } else {
-        $currentgroup = 0;
-    }
-    $groupingid = $cm->groupingid;*/
-
-    /*if (has_capability('mod/sepug:readresponses', $context) or ($groupmode == VISIBLEGROUPS)) {
-        $currentgroup = 0;
-    }*/
-
-	//$currentgroup = 0;
-    /*if (has_capability('mod/sepug:readresponses', $context)) {
-        $numusers = sepug_count_responses($survey->id, $currentgroup, $groupingid);
-        echo "<div class=\"reportlink\"><a href=\"report.php?id=$cm->id\">". // PENDIENTE DE CAMBIAR
-              get_string("viewsurveyresponses", "sepug", $numusers)."</a></div>";
-    } else if (!$cm->visible) {
-        notice(get_string("activityiscurrentlyhidden"));
-    }*/
 
 	// Si no esta matriculado en este curso
     if (!is_enrolled($context)) {
@@ -128,136 +97,119 @@ $completion->set_module_viewed($cm);*/
 			print_error('onlystudents', 'sepug');
 		}
 	}
-
-//  Check the survey hasn't already been filled out.
-
-    //if (sepug_already_done($survey->id, $USER->id)) {
-	if (sepug_already_done($cid, $USER->id)) {
-
-        //add_to_log($course->id, "sepug", "view graph", "view.php?id=$cm->id", $survey->id, $cm->id);
-        //$numusers = survey_count_responses($survey->id, $currentgroup, $groupingid);
-		//$numusers = survey_count_responses($cid, $currentgroup, $groupingid);
-		//$numusers = survey_count_responses($cid);
-		
+	
+	// Pasamos filtro de cursos si procede
+	if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
+		print_error('invalidcoursemodule');
+	}	
+	
+	if (sepug_already_done($cid, $USER->id, $group)) {
 		print_error("surveycompleted", "sepug");
-
-        /*if ($showscales) {
-            echo $OUTPUT->heading(get_string("surveycompleted", "sepug"));
-            echo $OUTPUT->heading(get_string("peoplecompleted", "sepug", $numusers));
-            echo '<div class="resultgraph">';
-            //sepug_print_graph("id=$cm->id&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
-			sepug_print_graph("cid=$cid&amp;sid=$USER->id&amp;group=$currentgroup&amp;type=student.png");
-            echo '</div>';
-
-        } else {
-
-            echo $OUTPUT->box(format_module_intro('sepug', $survey, $cm->id), 'generalbox', 'intro');
-            echo $OUTPUT->spacer(array('height'=>30, 'width'=>1), true);  // should be done with CSS instead
-
-            $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $survey->questions));
-            $questionorder = explode(",", $survey->questions);
-            foreach ($questionorder as $key => $val) {
-                $question = $questions[$val];
-                if ($question->type == 0 or $question->type == 1) {
-                    if ($answer = sepug_get_user_answer($survey->id, $question->id, $USER->id)) {
-                        $table = new html_table();
-                        $table->head = array(get_string($question->text, "sepug"));
-                        $table->align = array ("left");
-                        $table->data[] = array(s($answer->answer1));//no html here, just plain text
-                        echo html_writer::table($table);
-                        echo $OUTPUT->spacer(array('height'=>30, 'width'=>1), true);
-                    }
-                }
-            }
-        }*/
-
         echo $OUTPUT->footer();
         exit;
     }
-
-//  Start the survey form
-    //add_to_log($course->id, "sepug", "view form", "view.php?id=$cm->id", $survey->id, $cm->id);
-
-    echo "<form method=\"post\" action=\"save.php\" id=\"surveyform\">";
-    echo '<div>';
-    echo "<input type=\"hidden\" name=\"cmid\" value=\"$cmid\" />";
-	echo "<input type=\"hidden\" name=\"cid\" value=\"$cid\" />";
-    echo "<input type=\"hidden\" name=\"sesskey\" value=\"".sesskey()."\" />";
 
     echo $OUTPUT->box(format_module_intro('sepug', $survey, $cm->id), 'generalbox boxaligncenter bowidthnormal', 'intro');
-    echo '<div>'. get_string('allquestionrequireanswer', 'sepug'). '</div>';
+	
+	// Imprimir seleccionable de grupo, si es que hay grupos en esta asignatura
+	$groups_list[0] = 'Grupos...';
+	// Comprobamos que ese curso no tenga grupos internos..
+	$groups = groups_get_user_groups($cid,$USER->id);
+	foreach($groups[0] as $gr){
+		$group_name = $DB->get_record("groups", array("id"=>$gr),"name");
+		$groups_list[$gr] = $group_name->name;
+	}
+	if(count($groups_list)>1){
+		$mform = new surveygroupselect_form('survey_view.php', array('groups'=>$groups_list));
+		$mform->set_data(array('cid'=>$cid));
+		$mform->set_data(array('cmid'=>$cmid));
+		$mform->display();
+	}
+	
+	if(!($group==0 AND count($groups_list)>1)){
+		
+		echo "<form method=\"post\" action=\"save.php\" id=\"surveyform\">";
+		echo '<div>';
+		echo "<input type=\"hidden\" name=\"cmid\" value=\"$cmid\" />";
+		echo "<input type=\"hidden\" name=\"cid\" value=\"$cid\" />";
+		echo "<input type=\"hidden\" name=\"sesskey\" value=\"".sesskey()."\" />";
+		echo "<input type=\"hidden\" name=\"group\" value=\"$group\" />";
+		echo '<div>'. get_string('allquestionrequireanswer', 'sepug'). '</div>';
 
-	// Obtenemos las preguntas de las plantillas y no de la instanciacion del survey
-	if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
-        print_error('cannotfindquestion', 'sepug');
-    }
-    //$questionorder = explode( ",", $survey->questions);
-	$questionorder = explode( ",", $template->questions);
+		// Obtenemos las preguntas de las plantillas y no de la instanciacion del survey
+		if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
+			print_error('cannotfindquestion', 'sepug');
+		}
+		$questionorder = explode( ",", $template->questions);
 
-// Cycle through all the questions in order and print them
+		// Cycle through all the questions in order and print them
 
-    global $qnum;  //TODO: ugly globals hack for survey_print_*()
-    global $checklist; //TODO: ugly globals hack for survey_print_*()
-    $qnum = 0;
-    $checklist = array();
-    foreach ($questionorder as $key => $val) {
-        $question = $questions["$val"];
-        $question->id = $val;
+		global $qnum;  
+		global $checklist; 
+		$qnum = 0;
+		$checklist = array();
+		foreach ($questionorder as $key => $val) {
+			$question = $questions["$val"];
+			$question->id = $val;
 
-        if ($question->type >= 0) {
+			if ($question->type >= 0) {
 
-            if ($question->text) {
-                $question->text = get_string($question->text, "sepug");
-            }
+				if ($question->text) {
+					$question->text = get_string($question->text, "sepug");
+				}
 
-            if ($question->shorttext) {
-                $question->shorttext = get_string($question->shorttext, "sepug");
-            }
+				if ($question->shorttext) {
+					$question->shorttext = get_string($question->shorttext, "sepug");
+				}
 
-            if ($question->intro) {
-                $question->intro = get_string($question->intro, "sepug");
-            }
+				if ($question->intro) {
+					$question->intro = get_string($question->intro, "sepug");
+				}
 
-            if ($question->options) {
-                $question->options = get_string($question->options, "sepug");
-            }
+				if ($question->options) {
+					$question->options = get_string($question->options, "sepug");
+				}
 
-            if ($question->multi) {
-                sepug_print_multi($question);
-            } else {
-                sepug_print_single($question);
-            }
-        }
-    }
+				if ($question->multi) {
+					sepug_print_multi($question);
+				} else {
+					sepug_print_single($question);
+				}
+			}
+		}
 
-    if (!is_enrolled($context)) {
-        echo '</div>';
-        echo "</form>";
-        echo $OUTPUT->footer();
-        exit;
-    }
+		if (!is_enrolled($context)) {
+			echo '</div>';
+			echo "</form>";
+			echo $OUTPUT->footer();
+			exit;
+		}
 
-	// Llamada al modulo JS que comprueba si todas las preguntas estan contestadas
-    $checkarray = Array('questions'=>Array());
-    if (!empty($checklist)) {
-       foreach ($checklist as $question => $default) {
-           $checkarray['questions'][] = Array('question'=>$question, 'default'=>$default);
-       }
-    }
-    $PAGE->requires->data_for_js('surveycheck', $checkarray);
-    $module = array(
-        'name'      => 'mod_sepug',
-        'fullpath'  => '/mod/sepug/sepug.js',
-        'requires'  => array('yui2-event'),
-    );
-    $PAGE->requires->string_for_js('questionsnotanswered', 'sepug');
-    $PAGE->requires->js_init_call('M.mod_sepug.init', $checkarray, true, $module);
+		// Llamada al modulo JS que comprueba si todas las preguntas estan contestadas
+		$checkarray = Array('questions'=>Array());
+		if (!empty($checklist)) {
+		   foreach ($checklist as $question => $default) {
+			   $checkarray['questions'][] = Array('question'=>$question, 'default'=>$default);
+		   }
+		}
+		$PAGE->requires->data_for_js('surveycheck', $checkarray);
+		$module = array(
+			'name'      => 'mod_sepug',
+			'fullpath'  => '/mod/sepug/sepug.js',
+			'requires'  => array('yui2-event'),
+		);
+		$PAGE->requires->string_for_js('questionsnotanswered', 'sepug');
+		$PAGE->requires->js_init_call('M.mod_sepug.init', $checkarray, true, $module);
 
-    echo '<br />';
-    echo '<input type="submit" value="'.get_string("clicktocontinue", "sepug").'" />';
-    echo '</div>';
-    echo "</form>";
+		echo '<br />';
+		echo '<input type="submit" value="'.get_string("clicktocontinue", "sepug").'" />';
+		echo '</div>';
+		echo "</form>";
 
-    echo $OUTPUT->footer();
+		echo $OUTPUT->footer();
+	}
+	else{
+		echo $OUTPUT->footer();
+	}
 
 

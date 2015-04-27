@@ -16,15 +16,26 @@
 
 require_once($CFG->libdir.'/formslib.php');
 
-class surveyselect_form extends moodleform {
+class surveygroupselect_form extends moodleform {
     //Add elements to form
     public function definition() {
         global $CFG;
  
         $mform = $this->_form;
 
-        $mform->addElement('select', 'type', get_string('selectsurvey_label', 'sepug'), $this->_customdata['email']);
-		$mform->setType('type', PARAM_INT);
+		$attributes = 'onChange="M.core_formchangechecker.set_form_submitted(); this.form.submit()"';
+        $mform->addElement('select', 'group', get_string('grouptext', 'sepug'), $this->_customdata['groups'], $attributes);
+		$mform->setType('group', PARAM_INT);
+		$mform->setDefault('group',0);
+		
+		// hidden elements
+        $mform->addElement('hidden', 'cmid');
+        $mform->setType('cmid', PARAM_INT);
+		$mform->addElement('hidden', 'cid');
+        $mform->setType('cid', PARAM_INT);
+		
+		// buttons
+        $mform->addElement('submit', 'add_item', 'aceptar', array('class' => 'hiddenifjs'));
     }
     //Custom validation should be added here
     function validation($data, $files) {

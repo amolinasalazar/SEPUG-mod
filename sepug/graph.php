@@ -18,7 +18,6 @@
     require_once("$CFG->libdir/graphlib.php");
     require_once("lib.php");
 
-    //$id    = required_param('id', PARAM_INT);    // Course Module ID
 	$cid   = required_param('cid', PARAM_INT);    // Course ID
     $type  = required_param('type', PARAM_FILE);  // Graph Type
     $group = optional_param('group', 0, PARAM_INT);  // Group ID
@@ -37,14 +36,6 @@
     }
     $PAGE->set_url($url);
 
-    /*if (! $cm = get_coursemodule_from_id('sepug', $id)) {
-        print_error('invalidcoursemodule');
-    }*/
-
-    /*if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
-        print_error('coursemisconf');
-    }*/
-	
 	if (! $course = $DB->get_record("course", array("id"=>$cid))) {
         print_error('coursemisconf');
     }
@@ -55,11 +46,8 @@
         }
     }
 
-    //require_login($course, false, $cm);
 	require_login($course);
 	
-    //$groupmode = groups_get_activity_groupmode($cm);   // Groups are being used
-    //$context = context_module::instance($cm->id);
 	$context = context_course::instance($course->id);
 
     if (!has_capability('mod/sepug:readresponses', $context)) {
@@ -69,26 +57,6 @@
             print_error('nopermissiontoshow');
         }
     }
-
-    /*if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
-        print_error('invalidsurveyid', 'sepug');
-    }*/
-	
-	/* if (! $survey = $DB->get_record("sepug", array("course"=>$cid))) {
-        print_error('invalidsurveyid', 'sepug');
-    }*/
-
-/// Check to see if groups are being used in this survey
-    /*if ($group) {
-        $users = get_users_by_capability($context, 'mod/sepug:participate', '', '', '', '', $group, null, false);
-    } else if (!empty($cm->groupingid)) {
-        $groups = groups_get_all_groups($courseid, 0, $cm->groupingid);
-        $groups = array_keys($groups);
-        $users = get_users_by_capability($context, 'mod/sepug:participate', '', '', '', '', $groups, null, false);
-    } else {
-        $users = get_users_by_capability($context, 'mod/sepug:participate', '', '', '', '', '', null, false);
-        $group = false;
-    }*/
 
     $stractual = get_string("actual", "sepug");
     $stractualclass = get_string("actualclass", "sepug");
@@ -127,20 +95,11 @@
 		$grado = 1;
 	}
 	
-	//$deviation_array = array();
 	// Hallamos los valores de la ultima pregunta de las encuestas en cada categoria
 	foreach($main_categories as $cat){
-		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$cat->name, "grado"=>$grado));
 		$question_max = $DB->get_record_sql("SELECT MAX(question) AS maxq FROM {sepug_global_stats} WHERE catname = '".$cat->name."' AND grado =".$grado);
 		$result = $DB->get_record("sepug_global_stats",array("question"=>(int)$question_max->maxq, "catname"=>$cat->name, "grado"=>$grado));
-		/*if($grado==1){
-			$result = $gstats[20];
-		}
-		else{
-			$result = array_pop($gstats);
-		}*/
 		$mean_array[] = $result->mean;
-		//$deviation_array[] =  $result->deviation;
 	}
 	
 	// Creamos el grafico de barras
@@ -173,70 +132,7 @@
 	$graph->y_order = array('mean');
 	$graph->draw();
 
-       /*$question = $DB->get_record("sepug_questions", array("id"=>$qid));
-       $question->text = get_string($question->text, "sepug");
-       $question->options = get_string($question->options, "sepug");
-
-       $options = explode(",",$question->options);
-
-       while (list($key,) = each($options)) {
-           $buckets1[$key] = 0;
-           $buckets2[$key] = 0;
-       }
-
-       //if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$qid))) {
-	   if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$cid, 'question'=>$qid))) {
-           foreach ($aaa as $aa) {
-               if (!$group or isset($users[$aa->userid])) {
-                   if ($a1 = $aa->answer1) {
-                       $buckets1[$a1 - 1]++;
-                   }
-                   if ($a2 = $aa->answer2) {
-                       $buckets2[$a2 - 1]++;
-                   }
-               }
-           }
-       }
-
-
-       $maxbuckets1 = max($buckets1);
-       $maxbuckets2 = max($buckets2);
-       $maxbuckets = ($maxbuckets1 > $maxbuckets2) ? $maxbuckets1 : $maxbuckets2;
-
-       $graph = new graph($SURVEY_GWIDTH,$SURVEY_GHEIGHT);
-       $graph->parameter['title'] = "$question->shorttext";
-
-       $graph->x_data               = $options;
-
-       $graph->y_data['answers1']   = $buckets1;
-       $graph->y_format['answers1'] = array('colour' => 'ltblue','bar' => 'fill','legend' =>$stractual,'bar_size' => 0.4);
-       $graph->y_data['answers2']   = $buckets2;
-       $graph->y_format['answers2'] = array('colour' =>'ltorange','bar' => 'fill','legend' =>$strpreferred,'bar_size' => 0.2);
-
-       $graph->parameter['legend']        = 'outside-top';
-       $graph->parameter['legend_border'] = 'black';
-       $graph->parameter['legend_offset'] = 4;
-
-       if (($maxbuckets1 > 0.0) && ($maxbuckets2 > 0.0)) {
-           $graph->y_order = array('answers1', 'answers2');
-       } else if ($maxbuckets1 > 0.0) {
-           $graph->y_order = array('answers1');
-       } else {
-           $graph->y_order = array('answers2');
-       }
-
-       $graph->parameter['y_axis_gridlines']= $maxbuckets + 1;
-       $graph->parameter['y_resolution_left']= 1;
-       $graph->parameter['y_decimal_left']  = 0;
-       $graph->parameter['x_axis_angle']    = 20;
-       $graph->parameter['shadow']          = 'none';
-
-       $graph->y_tick_labels = null;
-       $graph->offset_relation = null;
-
-       $graph->draw_stack();*/
-
-       break;
+    break;
 
 
 
@@ -262,7 +158,6 @@
            $stdev2[$i] = 0;
        }
 
-       //$aaa = $DB->get_records_select("sepug_answers", "((survey = ?) AND (question in ($question->multi)))", array($cm->instance));
 		$aaa = $DB->get_records_select("sepug_answers", "((courseid = ?) AND (question in ($question->multi)))", array($cid));
 	
        if ($aaa) {

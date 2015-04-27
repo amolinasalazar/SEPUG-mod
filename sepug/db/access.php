@@ -28,13 +28,9 @@ $capabilities = array(
 
     'mod/sepug:addinstance' => array(
         'riskbitmask' => RISK_XSS,
-
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => array(
-            'manager' => CAP_ALLOW
-        ),
-        'clonepermissionsfrom' => 'moodle/course:manageactivities'
+        'archetypes' => array('manager' => CAP_ALLOW)
     ),
 
     'mod/sepug:participate' => array(
@@ -42,11 +38,9 @@ $capabilities = array(
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => array(
-			'user' => CAP_ALLOW,
             'student' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
+            'editingteacher' => CAP_ALLOW
         )
     ),
 
@@ -55,10 +49,8 @@ $capabilities = array(
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => array(
-			'user' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
+            'editingteacher' => CAP_ALLOW
         )
     ),
 
@@ -67,13 +59,17 @@ $capabilities = array(
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => array(
-			'user' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        )
-    )
+            'editingteacher' => CAP_ALLOW
+        ),
+    ),
+	
+	'mod/sepug:global_download' => array(
 
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes' => array('manager' => CAP_ALLOW)
+    )
 );
 
 

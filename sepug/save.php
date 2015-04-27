@@ -26,6 +26,8 @@
 
     require_once('../../config.php');
     require_once('lib.php');
+	
+	global $FILTRO_CURSOS;
 
 
 // Make sure this is a legitimate posting
@@ -34,9 +36,9 @@
         print_error('cannotcallscript');
     }
 
-    //$id = required_param('id', PARAM_INT);    // Course Module ID
 	$cmid = required_param('cmid', PARAM_INT);    // Course Module ID
 	$cid = required_param('cid', PARAM_INT);    // Course ID
+	$group = optional_param('group', 0, PARAM_INT); // Group ID
 	
 	// Ignoramos el curso 1
 	if($cid == 1){
@@ -47,24 +49,16 @@
         print_error('invalidcoursemodule');
     }
 
-    /*if (! $course = $DB->get_record("course", array("id"=>$cm->course))) {
-        print_error('coursemisconf');
-    }*/
 	if (! $course = $DB->get_record("course", array("id"=>$cid))) {
         print_error('coursemisconf');
     }
 
-    //$PAGE->set_url('/mod/sepug/save.php', array('id'=>$id));
 	$PAGE->set_url('/mod/sepug/save.php', array('cid'=>$cid, 'cmid'=>$cmid));
     require_login($course);
 
-    //$context = context_module::instance($cm->id);
 	$context = context_course::instance($course->id);
     require_capability('mod/sepug:participate', $context);
 
-    /*if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
-        print_error('invalidsurveyid', 'sepug');
-    }*/
 	if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
     }
@@ -86,11 +80,14 @@
 	// Si sepug NO esta activo para alumnos
     $checktime = time();
     if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
-		OR ($survey->timeclosestudents < $checktime)) {
+		OR ($survey->timeclosestudents < $checktime)){
 		print_error('sepug_is_not_open', 'sepug');
 	}
-
-    //add_to_log($course->id, "sepug", "submit", "view.php?id=$cm->id", "$survey->id", "$cm->id");
+	
+	// Pasamos filtro de cursos si procede
+	if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
+		print_error('invalidcoursemodule');
+	}	
 
     $strsurveysaved = get_string('surveysaved', 'sepug');
 
@@ -98,10 +95,6 @@
     $PAGE->set_heading($course->fullname);
     echo $OUTPUT->header();
 
-    /*if (sepug_already_done($survey->id, $USER->id)) {
-        notice(get_string("alreadysubmitted", "sepug"), $_SERVER["HTTP_REFERER"]);
-        exit;
-    }*/
 	if (sepug_already_done($cid, $USER->id)) {
         notice(get_string("alreadysubmitted", "sepug"), $_SERVER["HTTP_REFERER"]);
         exit;
@@ -115,7 +108,7 @@
     $answers = array();
 
     foreach ($formdata as $key => $val) {
-        if ($key <> "userid" && $key <> "id" && $key <> "cmid" && $key <> "cid" &&$key <> "sesskey") {
+        if ($key <> "userid" && $key <> "id" && $key <> "cmid" && $key <> "cid" && $key <> "sesskey" && $key <>"group") {
             if ( substr($key,0,1) == "q") {
                 $key = clean_param(substr($key,1), PARAM_ALPHANUM);   // keep everything but the 'q', number or Pnumber
             }
@@ -136,6 +129,7 @@
 		$newdata->userid = $USER->id;
 		$newdata->courseid = $cid;
 		$newdata->question = $key;
+		$newdata->groupid = $group;
 		if (!empty($val[0])) {
 			$newdata->answer1 = $val[0];
 		} else {
@@ -151,32 +145,7 @@
         
     }
 
-    /*$timenow = time();
-    foreach ($answers as $key => $val) {
-        if ($key != 'sesskey') {
-            $newdata = new stdClass();
-            $newdata->time = $timenow;
-            $newdata->userid = $USER->id;
-            $newdata->survey = $survey->id;
-            $newdata->question = $key;
-            if (!empty($val[0])) {
-                $newdata->answer1 = $val[0];
-            } else {
-                $newdata->answer1 = "";
-            }
-            if (!empty($val[1])) {
-                $newdata->answer2 = $val[1];
-            } else {
-                $newdata->answer2 = "";
-            }
-
-            $DB->insert_record("sepug_answers", $newdata);
-        }
-    }*/
-
 // Print the page and finish up.
-
-    //notice(get_string("thanksforanswers","sepug", $USER->firstname), "$CFG->wwwroot/course/view.php?id=$course->id");
 	notice(get_string("thanksforanswers","sepug", $USER->firstname), "$CFG->wwwroot/mod/sepug/view.php?id=$cmid");
 
     exit;

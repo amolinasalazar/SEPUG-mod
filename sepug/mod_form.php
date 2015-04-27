@@ -32,7 +32,7 @@ class mod_sepug_mod_form extends moodleform_mod {
         $strrequired = get_string('required');
 		
 		// Comprobar que no hay una instancia SEPUG previamente creada en Moodle
-		if ($DB->record_exists("sepug", array("id"=>3)) && $update==0) {
+		if ($DB->record_exists("sepug", array("sepuginstance"=>1)) && $update==0) {
 			print_error('sepug_already_created', 'sepug');
 		}
 		
@@ -52,20 +52,6 @@ class mod_sepug_mod_form extends moodleform_mod {
             $mform->setType('name', PARAM_CLEANHTML);
         }
         $mform->addRule('name', null, 'required', null, 'client');
-		
-		
-		// tipo cuestionario
-        /*if (!$options = $DB->get_records_menu("sepug", array("template"=>0), "name", "id, name")) {
-            print_error('cannotfindsurveytmpt', 'sepug');
-        }
-        foreach ($options as $id => $name) {
-            $options[$id] = get_string($name, "sepug");
-        }
-        $options = array(''=>get_string('choose').'...') + $options;
-        $mform->addElement('select', 'template', get_string("surveytype", "sepug"), $options);
-        $mform->addRule('template', $strrequired, 'required', null, 'client');
-        $mform->addHelpButton('template', 'surveytype', 'sepug');
-		*/
 		
 		// descripcion
         $this->add_intro_editor(false, get_string('customintro', 'sepug'));

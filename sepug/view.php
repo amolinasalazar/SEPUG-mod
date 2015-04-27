@@ -25,9 +25,9 @@
 
     require_once("../../config.php");
     require_once("lib.php");
-	require_once('sepug_surveyselect_form_class.php');
+	require_once('classes/surveyselect_form.php');
 	
-	global $USER, $DB;
+	global $USER, $DB, $FILTRO_CURSOS;
 
     $id = required_param('id', PARAM_INT);    // Course Module ID
 
@@ -44,8 +44,6 @@
     //$context = context_module::instance($cm->id);
 	$context = context_course::instance($course->id);
 
-    require_capability('mod/sepug:participate', $context);
-
 	// Si no esta creada la instancia de SEPUG
     if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
@@ -55,29 +53,6 @@
 	require_once($CFG->libdir . '/completionlib.php');
 	$completion = new completion_info($course);
 	$completion->set_module_viewed($cm);
-	/*
-	// Si es un usuario invitado, no le damos acceso	
-	if (!is_enrolled($context)) {
-        echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
-    }
-	
-	if (!$cm->visible) {
-        notice(get_string("activityiscurrentlyhidden"));
-    }
-*/
-
-    /*$PAGE->set_title('hola');
-    $PAGE->set_heading('hola');
-    echo $OUTPUT->header();
-	// texto grande
-	echo $OUTPUT->heading(get_string("surveycompleted", "sepug"));
-	// Pie pagina
-    echo $OUTPUT->footer();*/
-	
-	
-	
-	
-	
 
 	$PAGE->set_title(get_string("modulename","sepug"));
     $PAGE->set_heading(get_string("modulename","sepug"));
@@ -88,20 +63,6 @@
 	// Si sepug NO esta activo para alumnos
     $checktime = time();
     if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime)) {
-			
-		/*
-		// Todos ID de los cursos de moodle
-		$courses = $DB->get_records("course", array(), '', 'id');
-		foreach($courses as $cid){
-			$cntxt = get_context_instance(CONTEXT_COURSE, $cid);
-			if(is_enrolled($cntxt, $USER->id, '', true)){
-				$students = get_role_users(5 , $cntxt);
-				$teachers = get_role_users(2 , $cntxt);
-				
-			}
-			//$enrolled = is_enrolled($context, $USER->id, '', true); devuelve solo alumnos y profesores
-		}*/
-		
 		echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
         echo $OUTPUT->notification(get_string('sepug_is_not_open', 'sepug'));
         echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
@@ -113,15 +74,15 @@
 		
 		// Obtiene todos los cursos en los que esta matriculado - r: array asociativo(ids cursos)
 		$enrolled_courses = enrol_get_all_users_courses($USER->id, true, null, 'visible DESC, sortorder ASC');
+									
+		// Pasamos filtro a los cursos si procede
+		if($FILTRO_CURSOS){
+			$enrolled_courses = sepug_courses_validator($enrolled_courses);
+		}	
 		
 		// y nos quedamos solo con los que pertenezcan a las categorias padre: GRADO o POSTGRADO
 		$courses = array();
 		foreach($enrolled_courses as $course){
-			
-			//$catpath = $DB->get_record("course_categories", array("id"=>$course->category),"path");
-			
-			//if (preg_match("/php/i", "PHP es el lenguaje de secuencias de comandos web preferido."))
-			
 			// Si la categoria pertenece a GRADO o POSTGRADO
 			$select = "path LIKE '/".$survey->catgrado."%' OR path LIKE '/".$survey->catposgrado."%'";
 			if($DB->record_exists_select("course_categories", $select, array("visible"=>1, "id"=>$course->category))){
@@ -174,8 +135,22 @@
 				// Montamos la lista de cursos para el select
 				$courses_list[0] = 'Cursos...';
 				foreach($stud_courses as $cid){
-					if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id)){
-						$courses_list[$cid] = $course->fullname;
+					// Comprobamos que ese curso no tenga grupos internos..
+					$groups = groups_get_user_groups($cid,$USER->id);
+					if(empty($groups[0])){
+						if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id)){
+							$courses_list[$cid] = $course->fullname;
+						}
+					}
+					else{
+						$ya_introducido = false;
+						foreach($groups[0] as $group){
+							if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id, $group) and
+							!$ya_introducido){
+								$courses_list[$cid] = $course->fullname;
+								$ya_introducido = true;
+							}
+						}
 					}
 				}
 				
@@ -204,36 +179,6 @@
 					$timeclosestudents = date('d', $survey->timeclosestudents).' del '.date('m', $survey->timeclosestudents).' a las '.date('H', $survey->timeclosestudents).':'.date('i', $survey->timeclosestudents).' horas';
 					echo $OUTPUT->notification(get_string('closestudentsdate', 'sepug', $timeclosestudents));	
 				}
-					
-				
-				//echo html_writer::start_tag('form', array('id' => 'selectform', 'method' => 'post', 'action' => ''));
-				//echo html_writer::select($options, 'selectmenu', '0', false, array('onchange' => 'this.form.submit()'));
-				//echo html_writer::end_tag('form');
-				
-				/*
-				//imprimirselect, cursos no ha hecho ya sepug_already_done($survey->id, $USER->id) y que no sea profesor de ellos
-				// si select vacio (xk seas profesor de todas las asignaturas o xk ya hayas completado todos cuestionarios...)
-				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
-				echo '<div class="mdl-align">';
-				echo '<form>';
-				echo '<fieldset>';
-				echo '<label>Lista cursos que estudias: </label>';
-				echo '<select name="courses_list"/>';
-				foreach($stud_courses as $cid){
-					if($course = $DB->get_record("course", array("id"=>$cid))){
-						echo '<option value="'.$cid.'">'.$course->fullname.'</option>';
-					}
-				}
-				echo '</select>';
-				echo '<button type="submit">'.get_string('go_to_survey', 'sepug').'</button>';
-				//echo $OUTPUT->help_icon('mapcourse', 'feedback');
-				echo '</fieldset>';
-				echo '</form>';
-				echo '<br />';
-				echo '</div>';
-				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
-				*/
 			}
 		}
 		
@@ -273,39 +218,29 @@
 				// Informa del periodo del cierre para los profesores
 				$timeclose = date('d', $survey->timeclose).' del '.date('m', $survey->timeclose).' a las '.date('H', $survey->timeclose).':'.date('i', $survey->timeclose).' horas';
 				echo $OUTPUT->notification(get_string('closedate', 'sepug', $timeclose));
-			
-			
-				/*$mform = new surveyselect_form(null, array('courses'=>$courses_list));
-				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
-				echo '<div class="mdl-align">';
-				$mform->display();
-				echo '</div>';
-				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();
-			
-				// si estan listos, imprimir select igual para ir resultados
-				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
-				echo '<div class="mdl-align">';
-				echo '<form>';
-				echo '<fieldset>';
-				echo '<label>Lista cursos de los que eres profesor/a: </label>';
-				echo '<select name="courses_list"/>';
-				foreach($prof_courses as $cid){
-					if($course = $DB->get_record("course", array("id"=>$cid))){
-						echo '<option value="'.$cid.'">'.$course->fullname.'</option>';
-					}
-				}
-				echo '</select>';
-				echo '<button type="submit">'.get_string('go_to_results', 'sepug').'</button>';
-				//echo $OUTPUT->help_icon('mapcourse', 'feedback');
-				echo '</fieldset>';
-				echo '</form>';
-				echo '<br />';
-				echo '</div>';
-				echo $OUTPUT->box_end();
-				echo $OUTPUT->footer();*/
 			}
 		}
+		
+		// Si sepug esta activo para profesores y Si tiene permisos para descargar el fichero de datos global,
+		// imprimimos un boton con el link a download.php
+		$checktime = time();
+		if (($survey->timeopen < $checktime) AND ($survey->timeclose > $checktime) 
+			AND ($survey->timeclosestudents < $checktime)) {
+		
+			if(has_capability('mod/sepug:global_download', $context)){
+				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
+				
+				$options = array();
+				$options["cmid"] = $id;
+				$options["type"] = "global";
+				echo '<div class="mdl-align">';
+				echo $OUTPUT->single_button(new moodle_url("download.php", $options), get_string("globaldownload","sepug"));
+				echo '</div>';
+				echo $OUTPUT->box_end();
+			}
+			
+		}
+		
 		echo $OUTPUT->footer();
 	}	
 

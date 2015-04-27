@@ -50,19 +50,14 @@ $SURVEY_QTYPE = array (
 
 
 define("SURVEY_COLDP15", "1");
-//define("SURVEY_COLLES_ACTUAL",           "1");
-//define("SURVEY_COLLES_PREFERRED",        "2");
-//define("SURVEY_COLLES_PREFERRED_ACTUAL", "3");
-//define("SURVEY_ATTLS",                   "4");
-//define("SURVEY_CIQ",                     "5");
 
 // Preguntas segun dimension
-global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB, $CAT_NAMES;
+global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB, $FILTRO_CURSOS;
 $DIM_PLANIF = array(1,2,4,5,18);
 $DIM_COMP_DOC = array(6,8,9,10,11,12,14);
 $DIM_EV_APREND = array(3,16,17);
 $DIM_AMB = array(13,15);
-$CAT_NAMES = array("ciclo lectivo","universidad","titulaciones",0);
+$FILTRO_CURSOS = true;
 
 
 // STANDARD FUNCTIONS ////////////////////////////////////////////////////////
@@ -132,11 +127,16 @@ function sepug_delete_instance($id) {
 
     $result = true;
 
-    if (! $DB->delete_records("sepug_analysis", array("survey"=>$survey->id))) {
+	// Borramos toda la BD, menos las templates y las questions
+    if (! $DB->delete_records("sepug_prof_stats")) {
+        $result = false;
+    }
+	
+	if (! $DB->delete_records("sepug_global_stats")) {
         $result = false;
     }
 
-    if (! $DB->delete_records("sepug_answers", array("survey"=>$survey->id))) {
+    if (! $DB->delete_records("sepug_answers")) {
         $result = false;
     }
 
@@ -292,70 +292,6 @@ function sepug_log_info($log) {
 
 /**
  * @global object
- * @param int $surveyid
- * @param int $groupid
- * @param int $groupingid
- * @return array
- */
-/*function sepug_get_responses($surveyid, $groupid, $groupingid) {
-    global $DB;
-
-    $params = array('surveyid'=>$surveyid, 'groupid'=>$groupid, 'groupingid'=>$groupingid);
-
-    if ($groupid) {
-        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid AND gm.groupid = :groupid ";
-
-    } else if ($groupingid) {
-        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid
-                       JOIN {groupings_groups} gg ON gm.groupid = gg.groupid AND gg.groupingid = :groupingid ";
-    } else {
-        $groupsjoin = "";
-    }
-
-    $userfields = user_picture::fields('u');
-    return $DB->get_records_sql("SELECT $userfields, MAX(a.time) as time
-                                   FROM {sepug_answers} a
-                                   JOIN {user} u ON a.userid = u.id
-                            $groupsjoin
-                                  WHERE a.survey = :surveyid
-                               GROUP BY $userfields
-                               ORDER BY time ASC", $params);
-}*/
-
-/** SEPUG FUNCTION
- * @global object
- * @param int $courseid
- * @param int $groupid
- * @param int $groupingid
- * @return array
- */
-function sepug_get_responses($courseid, $groupid, $groupingid) {
-    global $DB;
-
-    $params = array('courseid'=>$courseid, 'groupid'=>$groupid, 'groupingid'=>$groupingid);
-
-    if ($groupid) {
-        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid AND gm.groupid = :groupid ";
-
-    } else if ($groupingid) {
-        $groupsjoin = "JOIN {groups_members} gm ON u.id = gm.userid
-                       JOIN {groupings_groups} gg ON gm.groupid = gg.groupid AND gg.groupingid = :groupingid ";
-    } else {
-        $groupsjoin = "";
-    }
-
-    $userfields = user_picture::fields('u');
-    return $DB->get_records_sql("SELECT $userfields, MAX(a.time) as time
-                                   FROM {sepug_answers} a
-                                   JOIN {user} u ON a.userid = u.id
-                            $groupsjoin
-                                  WHERE a.courseid = :courseid
-                               GROUP BY $userfields
-                               ORDER BY time ASC", $params);
-}
-
-/**
- * @global object
  * @param int $survey
  * @param int $user
  * @return array
@@ -455,11 +391,37 @@ function sepug_add_analysis($survey, $user, $notes) {
  * @param int $user
  * @return bool
  */
-/*function sepug_already_done($survey, $user) {
+function sepug_courseid_validator($courseid) {
+    global $DB;
+	
+	$valid = false;
+	$valid_courses = $DB->get_records_sql("SELECT a.id FROM {course} a WHERE substr(a.idnumber,-2,2)<>'15' and substr(a.idnumber,-2,2)<>'SG'");
+	if(in_array($courseid, array_keys($valid_courses))){
+		$valid = true;
+	}
+	
+	return $valid;
+}
+
+function sepug_courses_validator($courses) {
     global $DB;
 
-    return $DB->record_exists("sepug_answers", array("survey"=>$survey, "userid"=>$user));
-}*/
+	$valid_courses = $DB->get_records_sql("SELECT a.id FROM {course} a WHERE substr(a.idnumber,-2,2)<>'15' and substr(a.idnumber,-2,2)<>'SG'");
+	foreach($courses as $course){
+		if(!in_array($course->id, array_keys($valid_courses))){
+			unset($courses[$id]);
+		}
+	}
+	return $courses;
+}
+
+function sepug_get_valid_courses() {
+    global $DB;
+	
+	return $DB->get_records_sql("SELECT a.id FROM {course} a WHERE substr(a.idnumber,-2,2)<>'15' and substr(a.idnumber,-2,2)<>'SG'");
+}
+
+
 
 /** SEPUG FUNCTION
  * @global object
@@ -467,24 +429,15 @@ function sepug_add_analysis($survey, $user, $notes) {
  * @param int $user
  * @return bool
  */
-function sepug_already_done($courseid, $user) {
+function sepug_already_done($courseid, $user, $group=0) {
     global $DB;
-
-    return $DB->record_exists("sepug_answers", array("courseid"=>$courseid, "userid"=>$user));
+	if($group==0){
+		return $DB->record_exists("sepug_answers", array("courseid"=>$courseid, "userid"=>$user));
+	}
+	else{
+		return $DB->record_exists("sepug_answers", array("courseid"=>$courseid, "userid"=>$user, "groupid"=>$group));
+	}
 }
-/**
- * @param int $surveyid
- * @param int $groupid
- * @param int $groupingid
- * @return int
- */
-/*function sepug_count_responses($surveyid, $groupid, $groupingid) {
-    if ($responses = sepug_get_responses($surveyid, $groupid, $groupingid)) {
-        return count($responses);
-    } else {
-        return 0;
-    }
-}*/
 
 /** SEPUG FUNC
  * @param int $courseid
@@ -492,18 +445,22 @@ function sepug_already_done($courseid, $user) {
  * @param int $groupingid
  * @return int
  */
-function sepug_count_responses($courseid, $groupid=false, $groupingid=false) {
-    if ($responses = sepug_get_responses($courseid, $groupid, $groupingid)) {
-        return count($responses);
-    } else {
-        return 0;
-    }
+function sepug_count_responses($courseid, $group=0) {
+	global $DB;
+	if($group == -1){
+		$n_resp = $DB->get_record_sql("SELECT COUNT(DISTINCT userid) AS num_resp FROM {sepug_answers} WHERE courseid = ?",
+			array($courseid));
+		return $n_resp->num_resp;
+	}
+	$n_resp = $DB->get_record_sql("SELECT COUNT(DISTINCT userid) AS num_resp FROM {sepug_answers} WHERE courseid = ? AND groupid = ?",
+		array($courseid, $group));
+    return $n_resp->num_resp;
 }
 /** SEPUG FUNCTION
  * @param array $numlist
  */
 function sepug_mean($numlist, $numvalues) {
-	//return array_sum(($numlist) / count($numlist));
+
 	if($numvalues!=0)
 		return (array_sum($numlist) / $numvalues);
 	else
@@ -521,7 +478,6 @@ function sepug_deviation($frequencies, $mean) {
 		for($i=0; $i<$value && $key!=0; $i++){
 			$all_results[] = pow(($key-$mean),2);
 		}
-		//$x = pow(($x-$mean),2);
 	}
 	return sqrt(array_sum($all_results)/count($all_results)); 
 }
@@ -531,10 +487,6 @@ function sepug_deviation($frequencies, $mean) {
  */
 function sepug_freq_sum_values($array_freq) {
 	$sum = 0;
-	//$array = array();
-	/*foreach $array_freq as $key=>$freq{
-		$sum += $key*$freq;
-	}*/
 	
 	foreach ($array_freq as $key=>$freq){
 		$array_freq[$key] = $key*$freq;
@@ -615,7 +567,7 @@ function sepug_print_all_responses($cmid, $results, $courseid) {
  * @param int $courseid
  * @return array Devuelve array multidimensional con key=>question id y valor un array con las frecuencias de esa pregunta
  */
-function sepug_frequency_values($courseid) {
+function sepug_frequency_values($courseid, $group=0) {
 	global $DB;
 	
 	$freq_matrix = array();
@@ -659,30 +611,19 @@ function sepug_frequency_values($courseid) {
 					   $buckets1[$key] = 0;
 					   //$buckets2[$key] = 0;
 					}
-					
-					
+
 					// Obtenemos las respuestas para todos los usuarios que hallan contestado una determinada pregunta y un determinado cuestionario
 					//if ($aaa = $DB->get_records('sepug_answers', array('survey'=>$cm->instance, 'question'=>$subquestion->id))) {
-					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id))) {
+					if ($aaa = $DB->get_records('sepug_answers', array('courseid'=>$courseid, 'question'=>$subquestion->id, 'groupid'=>$group))) {
 					    foreach ($aaa as $aa) {
-						    //if (!$group or isset($users[$aa->userid])) {
 							   if ($a1 = $aa->answer1) {
 								   $buckets1[$a1 - 1]++;
-							   }  
-							   /*if ($a2 = $aa->answer2) {
-								   $buckets2[$a2 - 1]++;
-							   }*/
-						    //}
+							   }
 					    }
 						
 						// Almacenamos en una matriz todos los resultados
-						//$freq_matrix[] = $buckets1;
 						$freq_matrix[$subquestion->id] = (array)$buckets1;
 				    }
-					
-					
-					
-					
 				}
 			}
 		} 
@@ -694,13 +635,18 @@ function sepug_frequency_values($courseid) {
  * Suponiendo un report por curso-profesor
  * @param int $courseid
  */
-function sepug_insert_prof_stats($courseid) {
+function sepug_insert_prof_stats($courseid, $group=0) {
 	global $DB;
+	
+	// Si no hubiera datos, devolvemos error
+	if (!$DB->record_exists("sepug_answers", array("courseid"=>$courseid, "groupid"=>$group)) ) {
+        return 1;
+    } 
 
 	// Obtenemos frequencias de resultados y numero de respuestas por curso
-	$freq_matrix = sepug_frequency_values($courseid);
-	$responses = sepug_count_responses($courseid, 0, 0);
-
+	$freq_matrix = sepug_frequency_values($courseid, $group);
+	$responses = sepug_count_responses($courseid, $group);
+	
 	// Por cada question, calculamos media y desviacion
 	foreach ($freq_matrix as $key=>$freq_array){
 		
@@ -711,9 +657,10 @@ function sepug_insert_prof_stats($courseid) {
 		$record->question = $key;
 		$record->mean = sepug_mean($sum_array, $responses);
 		$record->deviation = sepug_deviation($freq_array,$record->mean);
+		$record->groupid = $group;
 		
 		// Insertamos datos en DB
-		if (!$stats = $DB->get_record("sepug_prof_stats", array("question"=>$key,"courseid"=>$courseid))) {
+		if (!$stats = $DB->get_record("sepug_prof_stats", array("question"=>$key,"courseid"=>$courseid, "groupid"=>$group))) {
 			$DB->insert_record("sepug_prof_stats", $record);
 		}
 		else{
@@ -738,11 +685,6 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 		if(!in_array($cat->name, $computed_cat)){
 			
 			$computed_cat[] = $cat->name;
-		
-			
-			/*if (!$cat_same_name = $DB->get_records("course_categories", array("name"=>$cat->name))) {
-				return 1;
-			}*/
 			
 			// Obtenemos todas las categorias que tengan el mismo nombre que esta y que se encuentren en el conjunto
 			$cat_same_name = array();
@@ -762,7 +704,7 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 					foreach($courses as $course){
 						if(!in_array($course->id,$courses_list)){
 							// Si no hay datos para ese curso, lo ignoramos
-							if(sepug_count_responses($course->id, 0, 0)!=0){
+							if(sepug_count_responses($course->id, -1)!=0){
 								$courses_list[] = $course->id; // $course_list tiene todos los cursos de una categoria general
 							}
 						}
@@ -774,7 +716,6 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 			if(!empty($courses_list)){
 			
 				// Obtenemos los resultados de todos los cursos por cada pregunta y calculamos media y desviacion
-				//$questions = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20);//TEMPORALLLLLLLLLLLLLLLLLLLLLLLLLLL
 				
 				if($grado){
 					
@@ -783,8 +724,7 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 					if (!$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
 						print_error('cannotfindquestion', 'sepug');
 					}
-					
-					//$scaled_questions = 0;
+
 					foreach($questions as $question){
 						if($question->options == "scalenumbers5"){
 							$scaled_questions = $question->multi; 
@@ -800,8 +740,7 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 					if (!$questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
 						print_error('cannotfindquestion', 'sepug');
 					}
-					
-					//$scaled_questions = 0;
+
 					foreach($questions as $question){
 						if($question->options == "scalenumbers5"){
 							$scaled_questions = $question->multi; 
@@ -816,9 +755,11 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 					$deviation_array=array();
 					foreach($courses_list as $cid){
 						// Si hay datos sobre esa pregunta en ese curso, los a�adimos a los arrays
-						if ($stat = $DB->get_record("sepug_prof_stats", array("courseid"=>$cid,"question"=>$question))) {
-							$mean_array[]=$stat->mean;
-							$deviation_array[]=$stat->deviation;
+						if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$cid,"question"=>$question))) {
+							foreach($stats as $stat){
+								$mean_array[]=$stat->mean;
+								$deviation_array[]=$stat->deviation;
+							}
 						}
 					}
 					
@@ -826,11 +767,22 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 					$record->question = $question;
 					$record->catname = $cat->name;
 					$record->mean = sepug_mean($mean_array, count($mean_array));
-					$dev_sum = 0;
+					
+					$mean_freq = array();
+					foreach($mean_array as $mean){
+						$mean_freq[$mean]=0;
+					}
+					foreach($mean_array as $mean){
+						$mean_freq[$mean]++;;
+					}
+
+					/*$dev_sum = 0;
 					foreach($deviation_array as $dev){
 						$dev_sum += pow($dev,2);
-					}
-					$record->deviation = sqrt($dev_sum);
+					}*/
+					//$record->deviation = sqrt($dev_sum);
+					$record->deviation = sepug_deviation($mean_freq, $record->mean);
+					
 					if($grado){
 						$record->grado = 1;
 					}
@@ -846,7 +798,6 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 						$record->id = $global_stat->id;
 						$DB->update_record("sepug_global_stats", $record);
 					}
-					
 				}//endforeach
 			}//endif
 		}
@@ -855,10 +806,6 @@ function sepug_compute_results_by_categories($categories, $grado = true){
 	return 0;
 }
 
-
-
-
-
 /** SEPUG FUNCTION (por nombre de categorias)
  * @param int $courseid
  */
@@ -866,10 +813,11 @@ function sepug_insert_global_stats(){
 	global $DB, $CFG;
 	require_once($CFG->dirroot.'/lib/coursecatlib.php');
 	
-	// Obtenemos todas las categorias
-	/*if (!$categories = $DB->get_records("course_categories", array("visible"=>1))) {
-		return 1;
-	}*/
+	// Si no hubiera datos, devolvemos error
+	if (!$DB->record_exists("sepug_prof_stats", array()) ) {
+        return 1;
+    } 
+	
 	// Hallamos la instancia actual de sepug
 	$sepug = $DB->get_record("sepug", array("sepuginstance"=>1));
 	
@@ -884,12 +832,6 @@ function sepug_insert_global_stats(){
 	$cat_posgrado = $DB->get_records_select("course_categories", $select, array("visible"=>1));
 	
 	sepug_compute_results_by_categories($cat_posgrado, false);
-	
-	// EN VEZ DE OBTENER TODAS, PIYAMOS SOLO LAS DE CAQTGRADO Y CATPOSGRADO SQL PATH /2/
-	// LUEGO ORDENAMOS ESAS CATEGORIAS EN DOS CONJUNTOS: GRADO Y EN POSGRADO
-	// obtener todas las categorias del CONJUNTO DETERMINADO con el mismo nombre
-	// aqui no tenemos en cuenta los grupos
-	// DETECTAMOS SI ES GRADO O POSG function (conjuntocat, grado/postgrado)
 	
 	return 0;
 }
@@ -934,7 +876,7 @@ function sepug_related_categories($cid){
  * @param array $questionorder
  * @param int $courseid
  */
-function sepug_print_frequency_table($survey, $course) {
+function sepug_print_frequency_table($survey, $course, $group=0) {
     global $OUTPUT, $DB;
 	
 	$courseid = $course->id;
@@ -942,10 +884,10 @@ function sepug_print_frequency_table($survey, $course) {
 	$table = new html_table();
 	
 	// Obtenemos resultados de la BD
-	if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid))) {
+	if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid, "groupid"=>$group))) {
 		
 		// Obtenemos las frecuencias de los resultados
-		$frequencies = sepug_frequency_values($courseid);
+		$frequencies = sepug_frequency_values($courseid, $group);
 		
 		// Obtenemos las categorias unicas
 		//$main_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats}");
@@ -962,7 +904,6 @@ function sepug_print_frequency_table($survey, $course) {
 		$size = array("","","","","","","","","");
 		$align = array ("left","center","center","center","center","center","center","center","center");
 		foreach($main_categories as $cat){
-			//$head[] = $cat->catname;
 			$head[] = $cat->name;
 			$headspan[] = 2;
 			array_push($data_head, get_string("mean", "sepug"), get_string("deviation", "sepug"));
@@ -990,14 +931,6 @@ function sepug_print_frequency_table($survey, $course) {
 			$data = array(get_string("$question->shorttext","sepug"), $frequencies[$stat->question][0], $frequencies[$stat->question][1], 
 			$frequencies[$stat->question][2], $frequencies[$stat->question][3], $frequencies[$stat->question][4], $frequencies[$stat->question][5], 
 			$stat->mean, $stat->deviation);	
-			
-			// Obtenemos los resultados globales de las encuestas
-			//$global_stats = $DB->get_records("sepug_global_stats",array("question"=>$stat->question));
-			
-			/*foreach($global_stats as $gstats){
-				$data[] = $gstats->mean;
-				$data[] = $gstats->deviation;
-			}*/
 			
 			foreach($main_categories as $cat){
 				// Si la categoria pertenece a GRADO o POSTGRADO
@@ -1050,7 +983,7 @@ function sepug_get_dim_results($stats, $dim) {
 /** SEPUG FUNCTION
  * @param int $courseid
  */
-function sepug_print_dimension_table($survey, $course) {
+function sepug_print_dimension_table($survey, $course, $group=0) {
     global $OUTPUT, $DB;
 	global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
 	$courseid = $course->id;
@@ -1081,7 +1014,7 @@ function sepug_print_dimension_table($survey, $course) {
 	
 	// Obtenemos resultados de la BD (aunque no hace falta ya que estamos escogiendo la categoria padre 
 	// que no debe estar duplicada en la BD, incluimos en los parametros si es de GRADO/POSTGRADO)
-	$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
+	$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid, "groupid"=>$group));
 	if(!$DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
 		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>0));
 	}
@@ -1093,11 +1026,6 @@ function sepug_print_dimension_table($survey, $course) {
 		return 1;
 	}
 	else{
-		
-		//$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
-		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name));
-		//$stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid));
-		//$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$parent_cat->name,"grado"=>));
 		
 		// Por cada dimension, obtenemos la media y desviacion
 		$mean_array = array();
@@ -1136,39 +1064,9 @@ function sepug_print_dimension_table($survey, $course) {
  */
 function sepug_print_global_results_graph($url){
 	global $CFG, $SEPUG_GHEIGHT, $SEPUG_GWIDTH;
-	//require_once("$CFG->libdir/graphlib.php");
-	
-	
-	// Obtenemos las categorias relacionadas con el curso
-	/*$main_categories = sepug_related_categories(2);
-	
-	$mean_array = array();
-	$deviation_array = array();
-	// Hallamos los valores de la ultima pregunta de las encuestas en cada categoria
-	foreach($main_categories as $cat){
-		$gstats = $DB->get_records("sepug_global_stats",array("catname"=>$cat->name));
-		$result = array_pop($gstats);
-		$mean_array[] = $result->mean;
-		$deviation_array[] =  $result->deviation;
-	}
-	
-	$x_data = array();
-	for ($i=0; $i<count($main_categories); $i++){
-		$x_data[] = $main_categories[$i]->name; 
-	}
-	
-	// PRUEBAS
-    print "<div style=\"border:5px solid red;\">";
-    print " PRUEBA var dump <br />\n";
-    print "<pre>";
-    var_dump($x_data);
-    print "</pre></div>";*/
-	
-	
 		 
 	echo "<img class='resultgraph' align=\"middle\" height=\"$SEPUG_GHEIGHT\" width=\"$SEPUG_GWIDTH\"".
          " src=\"$CFG->wwwroot/mod/sepug/graph.php?$url\" alt=\"".get_string("sepuggraph", "sepug")."\" />"; 
-	
 }
 
 /**
@@ -1546,4 +1444,39 @@ function sepug_extend_settings_navigation($settings, $surveynode) {
 function sepug_page_type_list($pagetype, $parentcontext, $currentcontext) {
     $module_pagetype = array('mod-survey-*'=>get_string('page-mod-survey-x', 'sepug'));
     return $module_pagetype;
+}
+
+function sepug_cron(){
+	global $DB;
+	
+	if(!$survey = $DB->get_record("sepug", array("sepuginstance"=>1))){
+		print_error('sepug_not_found', 'sepug');
+	}
+	else{
+	
+		// Si es momento de generar resultados, completamos las tablas sepug_prof_stats y sepug_global_stats
+		$checktime = time();
+		if (($survey->timeopen < $checktime) AND ($survey->timeclose > $checktime) 
+			AND ($survey->timeclosestudents < $checktime)) {
+			
+			// Si no hemos realizado ya el proceso (solo debe hacerse una vez)
+			if (!$DB->record_exists("sepug_global_stats", array())) {
+				
+				// Tenemos que completar los datos de todos los cursos y por cada grupo interno que haya
+				$allcourses = sepug_get_valid_courses();
+				foreach($allcourses as $course){
+					
+					$groups = groups_get_all_groups($course->id);
+					foreach($groups as $gr){
+						sepug_insert_prof_stats($course->id, $gr->id);
+					}
+					// El grupo 0 (por defecto) siempre se ejecuta
+					sepug_insert_prof_stats($course->id, 0);
+					
+				}
+				
+				sepug_insert_global_stats();
+			}
+		}
+	}
 }
