@@ -88,11 +88,15 @@
 		
 	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
 	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	$editingteacherrole = false;
 	foreach($roles as $rol){
-		// Si no es profesor de este curso
-		if($rol->roleid != 3){
-			print_error('onlyprof', 'sepug');
+		if($rol->roleid == 3){
+			$editingteacherrole=true;
 		}
+	}
+	// Si no es estudiante de este curso o es profesor y estudiante a la vez
+	if(!$editingteacherrole){
+		print_error('onlyprof', 'sepug');
 	}
 	
 	// Si sepug NO esta activo para profesores

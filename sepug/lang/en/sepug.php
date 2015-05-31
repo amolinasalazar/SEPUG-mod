@@ -89,13 +89,13 @@ $string['sepug:download'] = 'Descargar informe de resultados.';
 $string['sepug:global_download'] = 'Descargar informe de resultados globales';
 $string['sepuggraph'] = 'Sepug graph';
 $string['surveyname'] = 'Survey name';
-$string['sepug:participate'] = 'Contestar las encuestas.';
+$string['sepug:participate'] = 'Participar y contestar a las encuestas.';
 $string['sepug:readresponses'] = 'Ver resultados de las encuestas.';
 $string['surveysaved'] = 'Survey saved';
 $string['surveytype'] = 'Tipo de Cuestionario';
 $string['surveytype_help'] = 'El Cuestionario sobre la Labor Docente del Profesorado 2015 se ha elaborado siguiendo las directrices de los cuestionarios de opini&oacute;n vigentes que la Junta de Andaluc&iacute;a y el Vicerrectorado para la Garant&iacute;a de la Calidad de la Universidad de Granada ofrece. Para más informaci&oacute;n, visite http://calidad.ugr.es/';
 $string['surveytype_link'] = 'mod/sepug/mod';
-$string['thanksforanswers'] = 'Gracias por responder a este cuestionario, {$a}';
+$string['thanksforanswers'] = 'Gracias por responder a este cuestionario, {$a}, recuerda que es posible que todav&iacute;a te queden m&aacute;s cuestionarios por responder, regresa a la pantalla de inicio para comprobarlo.';
 $string['time'] = 'Time';
 $string['viewsurveyresponses'] = 'Ver {$a} respuestas al cuestionario';
 $string['notyetanswered'] = 'Sin responder';
@@ -103,10 +103,10 @@ $string['allquestionrequireanswer'] = 'Todas las preguntas son obligatorias y de
 
 
 
+$string['responsevaluenotvalid'] = 'Valor de respuesta no v&aacute;lido.';
+$string['coursesfilterexception'] = 'El filtrado de cursos no ha aceptado el ID del curso.';
 
-
-
-
+$string['sepugnotfound'] = 'No se ha encontrado una actividad SEPUG en la base de datos de Moodle.';
 
 $string['sepugtask'] = 'Computa todos los resultados recogidos por el modulo SEPUG, dependiendo de la cantidad de respuestas, esta tarea puede ser pesada para el servidor.';
 $string['activarsepug'] = 'Activar programación de cuestionarios.';
@@ -120,7 +120,7 @@ $string['sepugclose'] = 'Cerrar acceso y eliminar resultados obtenidos';
 $string['sepugclose_help'] = 'Es obligatorio programar una fecha para cerrar definitivamente el acceso al cuestionario. Al realizar dicha acci&oacute;n, se proceder&aacute; a la eliminaci&oacute;n de todos los datos almacenados en la base de datos. Se recomienda fijar un margen de tiempo prudente para que los resultados puedan ser visualizados.';
 
 $string['onlystudents'] = 'Solo los estudiantes del curso (sin otro tipo de rol) pueden contestar cuestionarios.';
-$string['onlyprof'] = 'Solo los profesores del curso (y que no sean estudiantes del mismo) pueden visualizar los resultados.';
+$string['onlyprof'] = 'Solo los profesores del curso pueden visualizar los resultados.';
 $string['notvalidcourse'] = 'Curso no v&aacute;lido.';
 $string['globaldownload'] = 'Descargar fichero de datos global';
 

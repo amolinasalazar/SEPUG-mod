@@ -91,16 +91,24 @@
 		
 	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
 	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	$studentrole = false;
+	$editingteacherrole = false;
 	foreach($roles as $rol){
-		// Si no es estudiante de este curso
-		if($rol->roleid != 5){
-			print_error('onlystudents', 'sepug');
+		if($rol->roleid == 3){
+			$editingteacherrole=true;
 		}
+		if($rol->roleid == 5){
+			$studentrole = true;
+		}
+	}
+	// Si no es estudiante de este curso o es profesor y estudiante a la vez
+	if(!$studentrole || $editingteacherrole){
+		print_error('onlystudents', 'sepug');
 	}
 	
 	// Pasamos filtro de cursos si procede
 	if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
-		print_error('invalidcoursemodule');
+		print_error('coursesfilterexception', 'sepug');
 	}	
 	
 	if (sepug_already_done($cid, $USER->id, $group)) {

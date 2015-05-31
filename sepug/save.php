@@ -86,7 +86,7 @@
 	
 	// Pasamos filtro de cursos si procede
 	if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
-		print_error('invalidcoursemodule');
+		print_error('coursesfilterexception', 'sepug');
 	}	
 
     $strsurveysaved = get_string('surveysaved', 'sepug');
@@ -120,6 +120,24 @@
             }
         }
     }
+	
+	// Check and validate the response values before insert them into the DB
+	$idarray = sepug_get_questions_ID($cid, true);
+	$IDsalready = array();
+	foreach($answers as $key => $val){
+		
+		// Check if the question ID is valid and is not already processed
+		if(!in_array($key,$idarray) or in_array($key, $IDsalready)){
+			print_error('responsevaluenotvalid', 'sepug');
+		}
+		
+		// Check if the response values are valid
+		if(!sepug_response_value_validator($val[0], $key)){
+			print_error('responsevaluenotvalid', 'sepug');
+		}
+		
+		$IDsalready[] = $key;
+	}
 
 	// Now store the data.
 	$timenow = time();
@@ -135,17 +153,16 @@
 		} else {
 			$newdata->answer1 = "";
 		}
-		if (!empty($val[1])) {
+		/*if (!empty($val[1])) {
 			$newdata->answer2 = $val[1];
 		} else {
 			$newdata->answer2 = "";
-		}
+		}*/
 
 		$DB->insert_record("sepug_answers", $newdata);
-        
     }
 
-// Print the page and finish up.
+	// Print the page and finish up.
 	notice(get_string("thanksforanswers","sepug", $USER->firstname), "$CFG->wwwroot/mod/sepug/view.php?id=$cmid");
 
     exit;

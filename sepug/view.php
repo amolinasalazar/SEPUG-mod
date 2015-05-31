@@ -72,23 +72,7 @@
     }
 	else{
 		
-		// Obtiene todos los cursos en los que esta matriculado - r: array asociativo(ids cursos)
-		$enrolled_courses = enrol_get_all_users_courses($USER->id, true, null, 'visible DESC, sortorder ASC');
-									
-		// Pasamos filtro a los cursos si procede
-		if($FILTRO_CURSOS){
-			$enrolled_courses = sepug_courses_validator($enrolled_courses);
-		}	
-		
-		// y nos quedamos solo con los que pertenezcan a las categorias padre: GRADO o POSTGRADO
-		$courses = array();
-		foreach($enrolled_courses as $course){
-			// Si la categoria pertenece a GRADO o POSTGRADO
-			$select = "path LIKE '/".$survey->catgrado."%' OR path LIKE '/".$survey->catposgrado."%'";
-			if($DB->record_exists_select("course_categories", $select, array("visible"=>1, "id"=>$course->category))){
-				$courses[] = $course;
-			}
-		}
+		$courses = sepug_get_enrolled_valid_courses($survey);
 		
 		// Si no esta matriculado en ningun curso o solo al curso general (id=1), no es profesor ni alumno
 		if(empty($courses) or (count($courses)==1 and array_keys($courses) == 1)){
