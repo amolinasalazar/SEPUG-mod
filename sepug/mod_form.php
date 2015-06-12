@@ -1,7 +1,7 @@
 <?php
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -12,6 +12,14 @@
     GNU General Public License for more details.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses>.
+ */
+
+/**
+ * This file is responsible for show the configuration form of the SEPUG instance.
+ *
+ * @package   mod-sepug
+ * @copyright 2015 Alejandro Molina Salazar
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 if (!defined('MOODLE_INTERNAL')) {
@@ -29,14 +37,12 @@ class mod_sepug_mod_form extends moodleform_mod {
 
         $mform =& $this->_form;
 		
-        $strrequired = get_string('required');
-		
-		// Comprobar que no hay una instancia SEPUG previamente creada en Moodle
+		// Check if there is not a SEPUG instance already created
 		if ($DB->record_exists("sepug", array("sepuginstance"=>1)) && $update==0) {
 			print_error('sepug_already_created', 'sepug');
 		}
-		
-		// Activamos el campo "instance" que ratifica que esa entrada es una instancia
+
+		// Set 'sepuginstance' field to 1
 		$mform->addElement('hidden', 'sepuginstance', '1');
 		$mform->setType('sepuginstance', PARAM_INT);
 
@@ -44,7 +50,7 @@ class mod_sepug_mod_form extends moodleform_mod {
 		// GENERAL
         $mform->addElement('header', 'general', get_string('general', 'form'));
 
-		// nombre
+		// Name
         $mform->addElement('text', 'name', get_string('name'), array('size'=>'64'));
         if (!empty($CFG->formatstringstriptags)) {
             $mform->setType('name', PARAM_TEXT);
@@ -53,33 +59,33 @@ class mod_sepug_mod_form extends moodleform_mod {
         }
         $mform->addRule('name', null, 'required', null, 'client');
 		
-		// descripcion
+		// Description
         $this->add_intro_editor(false, get_string('customintro', 'sepug'));
 		
 		//-------------------------------------------------------------------------------
-		// DISPONIBILIDAD
+		// AVAILABILITY
         $mform->addElement('header', 'timinghdr', get_string('availability'));
 		
-		// fecha activacion
+		// Time open
 		$mform->addElement('date_time_selector', 'timeopen', get_string('sepugopen', 'sepug'),
             array('optional' => false));
 		$mform->addHelpButton('timeopen', 'sepugopen', 'sepug');
 		
-		// cerrar alumnos y crear resultados
+		// Time close for student
 		$mform->addElement('date_time_selector', 'timeclosestudents', get_string('sepugclosestudents', 'sepug'),
             array('optional' => false));
 		$mform->addHelpButton('timeclosestudents', 'sepugclosestudents', 'sepug');
 
-		// cerrar
+		// Time close
         $mform->addElement('date_time_selector', 'timeclose', get_string('sepugclose', 'sepug'),
             array('optional' => false));
 		$mform->addHelpButton('timeclose', 'sepugclose', 'sepug');
 		
 		//-------------------------------------------------------------------------------
-		// CONFIGURACION
+		// CONFIGURATION
         $mform->addElement('header', 'config', get_string('config', 'sepug'));
 	
-		// Obtenemos el nivel maximo de profundidad de las categorias
+		// Retrieve the max. category depth level
 		$maxdepth = $DB->get_record_sql('SELECT MAX(depth) AS maxdepth FROM {course_categories}');    
 		
 		$options = array();
@@ -90,7 +96,7 @@ class mod_sepug_mod_form extends moodleform_mod {
         $mform->addElement('select', 'depthlimit', get_string("depth_limit", "sepug"), $options);
 		$mform->addHelpButton('depthlimit', 'depth_limit', 'sepug');
 		
-		// Obtenemos los nombres de las categorias de primer nivel
+		// Retrieve category names of first level
 		$firstdepthcat = $DB->get_records("course_categories", array("depth"=>1));
 		
 		$options = array();
@@ -98,23 +104,19 @@ class mod_sepug_mod_form extends moodleform_mod {
 			$options[$cat->id] = $cat->name;
 		}
 		
-		// Selector categoria de grado
+		// Grado category select
 		$mform->addElement('select', 'catgrado', get_string("catgrado", "sepug"), $options);
 		$mform->addHelpButton('catgrado', 'catgrado', 'sepug');
 		
-		// Selector categoria de posgrado
+		// Posgrado category select
 		$mform->addElement('select', 'catposgrado', get_string("catposgrado", "sepug"), $options);
 		$mform->addHelpButton('catposgrado', 'catposgrado', 'sepug');
 		
-		
 		//-------------------------------------------------------------------------------
-		// aniadir descripcion 
+		// description
         $this->standard_coursemodule_elements();
 		//-------------------------------------------------------------------------------
         // buttons
         $this->add_action_buttons();
     }
-
-
 }
-

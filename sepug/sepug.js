@@ -10,7 +10,7 @@ M.mod_sepug.init = function(Y) {
                 var surveyform = document.getElementById('surveyform');
                 for (var i=0; i < surveycheck.questions.length; i++) {
                     var tempquestion = surveycheck.questions[i];
-					// Si las preguntas radio o selected estan sin contestar, error
+					// If questions of types radio or selected had no answer, show alert
                     if (surveyform[tempquestion['question']][tempquestion['default']].checked || surveyform[tempquestion['question']][tempquestion['default']].selected) {
                         error = true;
                     }

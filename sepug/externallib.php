@@ -1,7 +1,7 @@
 <?php
 /*
-	© Universidad de Granada. Granada – 2014
-	© Rosana Montes Soldado y Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -12,6 +12,14 @@
     GNU General Public License for more details.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses>.
+ */
+
+/**
+ * This file provide functions that can be accessed as a web service
+ *
+ * @package   mod-sepug
+ * @copyright 2015 Alejandro Molina Salazar
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
  
 require_once($CFG->libdir . "/externallib.php");
@@ -28,7 +36,6 @@ class mod_sepug_external extends external_api {
 	
 	/**
      * Returns the details of the sepug instance, if it exists
-     *
      * @return array sepug instance details
      */
 	 public static function get_sepug_instance() {
@@ -55,7 +62,6 @@ class mod_sepug_external extends external_api {
     }
 	/**
      * Describes the get_sepug_instance return value.
-     *
      * @return external_single_structure
      */
     public static function get_sepug_instance_returns() {
@@ -73,8 +79,10 @@ class mod_sepug_external extends external_api {
 		);
     }
 
+	
+	
     /**
-     * Describes the parameters for get_sepug_instance.
+     * Describes the parameters for get_not_submitted_enrolled_courses_as_student.
      * @return external_function_parameters
      */
     public static function get_not_submitted_enrolled_courses_as_student_parameters() {
@@ -82,9 +90,8 @@ class mod_sepug_external extends external_api {
     }
 
     /**
-     * Returns the details of the sepug instance, if it exists
-     *
-     * @return array sepug instance details
+     * Returns all courses not submitted where the user is enrolled in as student.
+     * @return array Courses
      */
 	public static function get_not_submitted_enrolled_courses_as_student() {
         global $DB, $CFG, $USER;
@@ -109,39 +116,38 @@ class mod_sepug_external extends external_api {
 		// Array to store the feedbacks to return.
         $courses = sepug_get_enrolled_valid_courses($sepug);
 		
-		// Si no esta matriculado en ningun curso o solo al curso general (id=1), no es profesor ni alumno
+		// If $USER is not enrolled in any course or only to the course ID = 1
 		if(empty($courses) or (count($courses)==1 and array_keys($courses) == 1)){
 			return array();
 		}
 		
-		// Si esta matriculado en algo
+		// If $USER is enrolled in one or more courses
 		$stud_courses = array();
 		$prof_courses = array();
 		foreach($courses as $course){
 			$cid = $course->id;
 			$cntxt = get_context_instance(CONTEXT_COURSE, $cid);
-			// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+			// We get all the roles in this context - r: array asoc.(ids rol)
 			$roles = get_user_roles($cntxt, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
 			foreach($roles as $rol){
-				// Si es profesor de este curso
+				// If is editingteacher
 				if($rol->roleid == 3){
 					array_push($prof_courses, $cid);
 					if(in_array($cid, $stud_courses)){
 						array_pop($stud_courses);
 					}
 				}
-				// Si no lo es, pero si es estudiante
+				// If is student
 				else if($rol->roleid == 5 && !in_array($cid, $prof_courses)){
 					array_push($stud_courses, $cid);
 				}
 			}
 		}
 		
-		// Montamos la lista de cursos para el select
-		//$courses_list[0] = 'Cursos...';
+		// We generate a list of courses
 		$courses_list = array();
 		foreach($stud_courses as $cid){
-			// Comprobamos que ese curso no tenga grupos internos..
+			// Check if the course has groups
 			$groups = groups_get_user_groups($cid,$USER->id);
 			if(empty($groups[0])){
 				if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id)){
@@ -153,18 +159,11 @@ class mod_sepug_external extends external_api {
 					$return->groupname = "";
 					
 					$courses_list[] = (array)$return;
-					
-					//$courses_list[] = array("id"=>$cid, "fullname"=>$course->fullname);
-					//$courses_list['id'] = $cid;
-					//$courses_list['fullname'] = $course->fullname;
-					//$courses_list[$cid] = $course->fullname;
 				}
 			}
 			else{
-				//$ya_introducido = false;
 				foreach($groups[0] as $group){
-					if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id, $group) /*and
-					!$ya_introducido*/){
+					if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id, $group)){
 						
 						$return = new stdClass();
 						$return->id = (int)$cid;
@@ -174,10 +173,6 @@ class mod_sepug_external extends external_api {
 						$return->groupname = $group_name->name;
 	
 						$courses_list[] = (array)$return;
-						
-						//$courses_list[] = array("id"=>$cid, "fullname"=>$course->fullname);
-						//$courses_list[$cid] = $course->fullname;
-						//$ya_introducido = true;
 					}
 				}
 			}
@@ -187,8 +182,7 @@ class mod_sepug_external extends external_api {
     }
 
     /**
-     * Describes the get_sepug_instance return value.
-     *
+     * Describes the get_not_submitted_enrolled_courses_as_student return value.
      * @return external_multiple_structure
      */
     public static function get_not_submitted_enrolled_courses_as_student_returns() {
@@ -204,8 +198,10 @@ class mod_sepug_external extends external_api {
         );
     }
 	
+	
+	
 	/**
-     * Describes the parameters for get_sepug_instance.
+     * Describes the parameters for get_survey_questions.
      * @return external_function_parameters
      */
     public static function get_survey_questions_parameters() {
@@ -215,9 +211,9 @@ class mod_sepug_external extends external_api {
     }
 	
 	/**
-     * Returns the details of the sepug instance, if it exists
-     *
-     * @return array sepug instance details
+     * Returns all the questions of the survey related with the course
+	 * @param int $courseid
+     * @return array 
      */
 	 public static function get_survey_questions($courseid) {
         global $CFG, $DB, $USER;
@@ -289,13 +285,13 @@ class mod_sepug_external extends external_api {
 		
 		//--ACTION--//
 		
-		// Primero obtenemos el template
+		// First, we retrieve the template
 		$tmpid = sepug_get_template($params['courseid']);
 		if (! $template = $DB->get_record("sepug", array("id"=>$tmpid))) {
 			throw new moodle_exception('invalidtmptid', 'sepug');
 		}
 		
-		// Obtenemos las preguntas de la plantilla
+		// Obtain questions from template
 		if (! $questions = $DB->get_records_list("sepug_questions", "id", explode(',', $template->questions))) {
 			throw new moodle_exception('cannotfindquestion', 'sepug');
 		}
@@ -325,10 +321,6 @@ class mod_sepug_external extends external_api {
 							$item->text = get_string($q->text, "sepug");
 						}
 
-						/*if ($q->shorttext) {
-							$item->shorttext = get_string($q->shorttext, "sepug");
-						}*/
-
 						if ($q->options) {
 							$item->options = get_string($q->options, "sepug");
 						}
@@ -336,11 +328,8 @@ class mod_sepug_external extends external_api {
 						// Add the single item to the array of items
 						$arritems[] = (array)$item;
 					}
-						
-						
 				}
-					
-				
+
 				else{
 					
 					// Create object to return.
@@ -352,10 +341,6 @@ class mod_sepug_external extends external_api {
 						$item->text = get_string($question->text, "sepug");
 					}
 
-					/*if ($question->shorttext) {
-						$item->shorttext = get_string($question->shorttext, "sepug");
-					}*/
-
 					if ($question->options) {
 						$item->options = get_string($question->options, "sepug");
 					}
@@ -363,8 +348,6 @@ class mod_sepug_external extends external_api {
 					// Add the single item to the array of items
 					$arritems[] = (array)$item;
 				}
-					
-					
 			}
 		}
 
@@ -372,8 +355,7 @@ class mod_sepug_external extends external_api {
     }
 
 	/**
-     * Describes the get_sepug_instance return value.
-     *
+     * Describes the get_survey_questions return value.
      * @return external_multiple_structure
      */
     public static function get_survey_questions_returns() {
@@ -394,7 +376,7 @@ class mod_sepug_external extends external_api {
 	
 	
 	/**
-     * Describes the parameters for get_sepug_instance.
+     * Describes the parameters for submit_survey.
      * @return external_function_parameters
      */
     public static function submit_survey_parameters() {
@@ -416,9 +398,11 @@ class mod_sepug_external extends external_api {
     }
 	
 	/**
-     * Returns the details of the sepug instance, if it exists
-     *
-     * @return array sepug instance details
+     * Validate and store answers for the given survey.
+     * @param int $courseid
+	 * @param int $groupid
+	 * @param array $itemvalues
+     * @return int
      */
 	public static function submit_survey($courseid, $groupid, $itemvalues) {
         global $DB, $USER, $CFG;
@@ -531,15 +515,12 @@ class mod_sepug_external extends external_api {
     }
 	
 	/**
-     * Describes the get_sepug_instance return value.
-     *
+     * Describes the submit_survey return value.
      * @return null
      */
 	public static function submit_survey_returns() {
         return null;
     }
 	
-	
-	
-	
+
 }

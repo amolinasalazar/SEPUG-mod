@@ -1,8 +1,7 @@
 <?php
-
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -14,12 +13,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses>.
  */
-
+ 
 /**
- * This file is responsible for displaying a select form to complete surveys or to see the results
+ * This file is responsible for displaying a select form to complete surveys or to see the results.
  *
  * @package   mod-sepug
- * @copyright 2014 Alejandro Molina Salazar
+ * @copyright 2015 Alejandro Molina Salazar
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -41,10 +40,9 @@
 	
     $PAGE->set_url('/mod/sepug/view.php', array('id'=>$id));
     require_login($course, false, $cm);
-    //$context = context_module::instance($cm->id);
+
 	$context = context_course::instance($course->id);
 
-	// Si no esta creada la instancia de SEPUG
     if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
         print_error('invalidsurveyid', 'sepug');
     }
@@ -60,7 +58,7 @@
 	echo $OUTPUT->heading(get_string("modulename_full", "sepug"));
 	echo $OUTPUT->box(get_string("view_intro", "sepug"), 'generalbox', 'intro');
 	
-	// Si sepug NO esta activo para alumnos
+	// If SEPUG is NOT activated for students
     $checktime = time();
     if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime)) {
 		echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
@@ -74,7 +72,7 @@
 		
 		$courses = sepug_get_enrolled_valid_courses($survey);
 		
-		// Si no esta matriculado en ningun curso o solo al curso general (id=1), no es profesor ni alumno
+		// If $USER is not enrolled in any course or only to the course ID = 1
 		if(empty($courses) or (count($courses)==1 and array_keys($courses) == 1)){
 			echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 			echo $OUTPUT->notification(get_string('no_courses', 'sepug'));
@@ -84,42 +82,41 @@
 			exit;
 		}
 		
-		// Si esta matriculado en algo
+		// If $USER is enrolled in one or more courses
 		$stud_courses = array();
 		$prof_courses = array();
 		foreach($courses as $course){
 			$cid = $course->id;
 			$cntxt = get_context_instance(CONTEXT_COURSE, $cid);
-			// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+			// We get all the roles in this context - r: array asoc.(ids rol)
 			$roles = get_user_roles($cntxt, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
 			foreach($roles as $rol){
-				// Si es profesor de este curso
+				// If is editingteacher
 				if($rol->roleid == 3){
 					array_push($prof_courses, $cid);
 				}
-				// Si no lo es, pero si es estudiante
+				// If is student
 				else if($rol->roleid == 5){
 					array_push($stud_courses, $cid);
 				}
 			}
 		}
 		
-		// Si es estudiante
+		// If is student
 		if(!empty($stud_courses)){
 			$checktime = time();
-			// pero se encuentra fuera de plazo
+			// but is out of date
 			if ($survey->timeclosestudents < $checktime){
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->notification(get_string('sepug_close_for_students', 'sepug'));
-				//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
 			}
 			else{
 			
-				// Montamos la lista de cursos para el select
+				// We generate a select list of courses
 				$courses_list[0] = 'Cursos...';
 				foreach($stud_courses as $cid){
-					// Comprobamos que ese curso no tenga grupos internos..
+					// Check if the course has groups
 					$groups = groups_get_user_groups($cid,$USER->id);
 					if(empty($groups[0])){
 						if($course = $DB->get_record("course", array("id"=>$cid)) and !sepug_already_done($cid, $USER->id)){
@@ -138,18 +135,16 @@
 					}
 				}
 				
-				// Si el usuario ha contestado todos los cuestionarios
+				// If the $USER have already submitted all the surveys
 				if(count($courses_list)==1){
 					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 					echo $OUTPUT->notification(get_string('all_surveys_are_done', 'sepug'));
-					//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 					echo $OUTPUT->box_end();
 				}
 				else{
-					// Imprimimos select
+					// Print select
 					$mform = new surveyselect_form('survey_view.php', array('courses'=>$courses_list));
 					$mform->set_data(array('cmid'=>$id));
-					//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
 					echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 					echo $OUTPUT->heading(get_string("access_surveys", "sepug"));
 					echo '<div class="mdl-align">';
@@ -159,26 +154,25 @@
 					echo '</div>';
 					echo $OUTPUT->box_end();
 					
-					// Informa del periodo de cierre para los alumnos
+					// Info about the date to close
 					$timeclosestudents = date('d', $survey->timeclosestudents).' del '.date('m', $survey->timeclosestudents).' a las '.date('H', $survey->timeclosestudents).':'.date('i', $survey->timeclosestudents).' horas';
 					echo $OUTPUT->notification(get_string('closestudentsdate', 'sepug', $timeclosestudents));	
 				}
 			}
 		}
 		
-		// Si es profesor
+		// If is editingteacher
 		if(!empty($prof_courses)){
 			$checktime = time();
-			// pero todavia no estan listos los resultados
+			// but we have no results
 			if ($survey->timeclosestudents > $checktime){
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->notification(get_string('no_results', 'sepug'));
-				//echo $OUTPUT->continue_button($CFG->wwwroot.'/course/view.php?id='.$cm->course);
 				echo $OUTPUT->box_end();
 			}
 			else{
 				
-				// Montamos la lista de cursos para el select
+				// We generate a select list of courses
 				$courses_list[0] = 'Cursos...';
 				foreach($prof_courses as $cid){
 					if($course = $DB->get_record("course", array("id"=>$cid))){
@@ -186,10 +180,9 @@
 					}
 				}
 			
-				// Imprimimos select
+				// Print select
 				$mform = new surveyselect_form('report.php', array('courses'=>$courses_list));
 				$mform->set_data(array('cmid'=>$id));
-				//$add_item_form = new feedback_edit_add_question_form('edit_item.php');
 				echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 				echo $OUTPUT->heading(get_string("show_results", "sepug"));
 				echo '<div class="mdl-align">';
@@ -199,14 +192,14 @@
 				echo '</div>';
 				echo $OUTPUT->box_end();
 				
-				// Informa del periodo del cierre para los profesores
+				// Info about the date to close
 				$timeclose = date('d', $survey->timeclose).' del '.date('m', $survey->timeclose).' a las '.date('H', $survey->timeclose).':'.date('i', $survey->timeclose).' horas';
 				echo $OUTPUT->notification(get_string('closedate', 'sepug', $timeclose));
 			}
 		}
 		
-		// Si sepug esta activo para profesores y Si tiene permisos para descargar el fichero de datos global,
-		// imprimimos un boton con el link a download.php
+		// If SEPUG is activated for teachers and the $USER has the capability to download the global data file, 
+		// print a button for that.
 		$checktime = time();
 		if (($survey->timeopen < $checktime) AND ($survey->timeclose > $checktime) 
 			AND ($survey->timeclosestudents < $checktime)) {
@@ -224,7 +217,6 @@
 			}
 			
 		}
-		
 		echo $OUTPUT->footer();
 	}	
 

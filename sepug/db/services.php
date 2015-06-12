@@ -2,10 +2,11 @@
 /**
  * Web service of SEPUG module for external functions and service definitions.
  *
- * @copyright  Universidad de Granada. Granada – 2014 
+ * @copyright  Universidad de Granada. Granada – 2015 
  * @author     Alejandro Molina (amolinasalazar@gmail.com)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+ 
 // Web Services functions definitions.
 $functions = array(
         'mod_sepug_get_sepug_instance' => array(
@@ -37,5 +38,14 @@ $functions = array(
                 'description' => 'Store in DB the answers of a survey.',
                 'type'        => 'write',
 				'capabilities'=> 'mod/sepug:participate'
+        )
+);
+
+// The pre-build services to install.
+$services = array(
+        'Service for SEPUG' => array(
+                'functions' => array ('mod_sepug_get_sepug_instance', 'mod_sepug_get_not_submitted_enrolled_courses_as_student', 'mod_sepug_get_survey_questions', 'mod_sepug_submit_survey', 'core_webservice_get_site_info', 'core_enrol_get_users_courses'),
+                'restrictedusers' => 0,
+                'enabled'=>1,
         )
 );

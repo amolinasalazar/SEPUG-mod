@@ -1,7 +1,7 @@
 <?php
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -12,6 +12,14 @@
     GNU General Public License for more details.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses>.
+ */
+ 
+/**
+ * Class that helps to create a select element form with a list of groups of a given course.
+ *
+ * @package   mod-sepug
+ * @copyright 2015 Alejandro Molina Salazar
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once($CFG->libdir.'/formslib.php');

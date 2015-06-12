@@ -1,8 +1,7 @@
 <?php
-
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -20,7 +19,7 @@
  * module.
  *
  * @package   mod-sepug
- * @copyright 2014 Alejandro Molina Salazar
+ * @copyright 2015 Alejandro Molina Salazar
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -33,8 +32,8 @@ global $FILTRO_CURSOS;
 // Check that all the parameters have been provided.
 $cmid = required_param('cmid', PARAM_INT);    // Course Module ID
 $cid = optional_param('cid', '1', PARAM_INT);    // Course ID
-$type  = optional_param('type', 'ods', PARAM_ALPHA);
-$group = optional_param('group', 0, PARAM_INT);
+$type  = optional_param('type', 'ods', PARAM_ALPHA); // File type
+$group = optional_param('group', 0, PARAM_INT); // Group id
 
 if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
     print_error('invalidcoursemodule');
@@ -44,23 +43,23 @@ if (! $survey = $DB->get_record("sepug", array("id"=>$cm->instance))) {
 	print_error('invalidsurveyid', 'sepug');
 }
 
-// Si sepug NO esta activo para profesores
+// Check if SEPUG is activated for teachers
 $checktime = time();
 if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
 		OR ($survey->timeclosestudents > $checktime)) {
 	print_error('sepug_is_not_open', 'sepug');
 }
 
-// Pasamos filtro de cursos si procede
+// If we had set a course filter and the course is not valid
 if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
 	print_error('invalidcoursemodule');
 }	
 
 if($type =='ods'){
 	
-	// ----COMPROBACIONES----
+	// ----CHECKS----
 	
-	// Ignoramos el curso 1
+	// Skip course id = 1
 	if($cid == 1){
 		print_error('notvalidcourse','sepug');
 	}
@@ -76,25 +75,30 @@ if($type =='ods'){
 
 	require_capability('mod/sepug:download', $context) ;
 
-	// Si no esta matriculado en este curso
+	// If $USER is not enrolled in this course
 	if (!is_enrolled($context)) {
 		echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
 	}
 		
-	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+	// We get all the roles in this context - r: array asoc.(ids rol)
 	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	$editingteacherrole = false;
 	foreach($roles as $rol){
-		// Si no es profesor de este curso
-		if($rol->roleid != 3){
-			print_error('onlyprof', 'sepug');
+		if($rol->roleid == 3){
+			$editingteacherrole=true;
 		}
+	}
+	// If $USER is not an editingteacher
+	if(!$editingteacherrole){
+		print_error('onlyprof', 'sepug');
 	}
 	
 	if (!$DB->record_exists("sepug_prof_stats", array("courseid"=>$cid, "groupid"=>$group)) ) {
 		echo $OUTPUT->notification(get_string("no_results","sepug"));
 	}
 	else{
-		// ----FICHERO----
+		
+		// ----FILE----
 
 		$courseshortname = format_string($course->shortname, true, array('context' => $context));
 		/// Calculate file name
@@ -111,7 +115,7 @@ if($type =='ods'){
 		/// Creating the first worksheet
 		$myxls = $workbook->add_worksheet(textlib::substr(strip_tags(format_string($survey->name,true)), 0, 31));
 
-		// Escribimos una etiqueta por cada grupo que haya en la asignatura
+		// Write a label for each group of the course
 		$info_header = array("Asignatura","Grupo","Alumnos Encuestados");
 		$info_data = array($course->fullname,($group!=0) ? groups_get_group_name($group) : 'general',(string)sepug_count_responses($cid, $group));
 		$col=0;
@@ -120,20 +124,19 @@ if($type =='ods'){
 			$myxls->write_string(1,$i,$info_data[$i]);
 		}
 
-		// Imprimimos la tabla de frecuencias
-		// sepug_print_frequency_table
+		// Print frequency table [sepug_print_frequency_table]
 		$courseid = $course->id;
 		
-		// Obtenemos resultados de la BD
+		// Obtain results from DB
 		if ($stats = $DB->get_records("sepug_prof_stats", array("courseid"=>$courseid, "groupid" => $group))) {
 			
-			// Obtenemos las frecuencias de los resultados
+			// Retrieve results frequencies
 			$frequencies = sepug_frequency_values($courseid,$group);
 			
-			// Nos quedamos solo con las categorias globales que esten relacionadas con este curso, una por nivel de profundidad
+			// Just explore related global categories to the course, one per depth level
 			$main_categories = sepug_related_categories($courseid);
 			
-			// Preparamos los arrays para insertar las cabeceras
+			// Prepare arrays to insert heads
 			$header1 = array("Tabla de Frequencias","","","","","","",get_string("curso","sepug"),"");
 			$header2 = array(get_string("questions", "sepug"), get_string("scaleNS", "sepug"), get_string("scale1", "sepug"),
 			get_string("scale2", "sepug"),get_string("scale3", "sepug"),get_string("scale4", "sepug"),get_string("scale5", "sepug"), 
@@ -148,7 +151,7 @@ if($type =='ods'){
 				$myxls->write_string(4,$i,$header2[$i]);
 			}
 			
-			// Averiguamos si es de GRADO/POSTGRADO
+			// It's grado or postgrado
 			if(! $DB->get_records_sql("SELECT * FROM {course_categories} WHERE id = ".$course->category." AND path LIKE '/".$survey->catgrado."%' AND visible = 1")){
 				$grado = false;
 			}
@@ -166,10 +169,9 @@ if($type =='ods'){
 				strip_tags(format_text($stat->mean,true)), strip_tags(format_text($stat->deviation,true)));	
 				
 				foreach($main_categories as $cat){
-					// Si la categoria pertenece a GRADO o POSTGRADO
+					// Grado/Postgrado
 					$select = "path LIKE '/".$survey->catgrado."%'";
-					// NOTA: no usar record_exists_select, siempre devuelve true
-					//if($DB->record_exists_select("course_categories", $select, array("visible"=>1, "id"=>$course->category))){
+					// NOTE: don't use record_exists_select, always return true
 					if($grado){
 						$gstats = $DB->get_record("sepug_global_stats",array("question"=>$stat->question, "catname"=>$cat->name, "grado"=>1));
 					}
@@ -189,25 +191,24 @@ if($type =='ods'){
 		}
 	
 	
-		// Imprimimos la tabla de dimensiones
-		// sepug_print_dimension_table
+		// Print dimension table [sepug_print_dimension_table]
 		global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
 		
-		// Preparamos los arrays para insertar las cabeceras
+		// Prepare arrays to insert heads
 		$header1  = array("Tabla de Resultados según Dimensión",get_string("curso","sepug"),"",get_string("universidad","sepug"),"");
 		$header2 = array(strip_tags(format_text(get_string("dimension","sepug"),true)),strip_tags(format_text(get_string("mean","sepug"),true)),
 		strip_tags(format_text(get_string("deviation","sepug"),true)),
 		strip_tags(format_text(get_string("mean","sepug"),true)),strip_tags(format_text(get_string("deviation","sepug"),true)));
 		
-		$row++; //separamos ambas tablas
+		$row++; // space between tables
 		for($i=0; $i<count($header1); $i++) {
 			$myxls->write_string($row,$i,$header1[$i]);
 			$myxls->write_string($row+1,$i,$header2[$i]);
 		}
 		
-		// Obtenemos la categoria padre a nivel 1 de profundidad del curso
+		// Obtain father category at depth level 1 of the course
 		if ($cat_course = $DB->get_record("course_categories", array("id"=>$course->category))){
-			// Si el parent es 0, la categoria ya esta a nivel 1
+			// If parent is 0, the category is at level 1 already
 			if($cat_course->parent != 0){
 				$parent_id = $cat_course->path[1];
 				$parent_cat = $DB->get_record("course_categories", array("id"=>$parent_id),"name");
@@ -229,26 +230,25 @@ if($type =='ods'){
 		}
 		else{
 			
-			// Por cada dimension, obtenemos la media y desviacion
+			// For each dimension. obtain mean and desviation
 			$mean_array = array();
 			$deviation_array = array();
 			$gmean_array = array();
 			$gdeviation_array = array();
 			
-			// Valores por curso
+			// Course values
 			list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_PLANIF);
 			list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_COMP_DOC);
 			list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_EV_APREND);
 			list($mean_array[],$deviation_array[]) = sepug_get_dim_results($stats, $DIM_AMB);
 			
-			// Valores globales
+			// Global values
 			list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_PLANIF);
 			list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_COMP_DOC);
 			list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_EV_APREND);
 			list($gmean_array[],$gdeviation_array[]) = sepug_get_dim_results($gstats, $DIM_AMB);
 			
-			//$data = array($mean_array[],$deviation_array[],$gmean_array[],$gdeviation_array[]);
-			// Escribimos los resultados en el fichero
+			// Write results into the file
 			$row = $row+2;
 			for($i=0; $i<count($mean_array); $i++) {
 				$dim = "dim".($i+1);
@@ -270,7 +270,7 @@ if($type =='ods'){
 }
 elseif($type=='global'){	
 
-	// ----COMPROBACIONES----
+	// ----CHECKS----
 	
 	if (! $cm = get_coursemodule_from_id('sepug', $cmid)) {
         print_error('invalidcoursemodule');
@@ -287,13 +287,13 @@ elseif($type=='global'){
 
     require_capability('mod/sepug:global_download', $context);
 	
-	// Si no hay resultados, no generamos ningun fichero
+	// If we have no results, there is no need to generate any file
 	if (!$DB->record_exists("sepug_global_stats", array())) {
         echo $OUTPUT->notification(get_string("no_results","sepug"));
     } 
 	else{
 	
-		// ----FICHERO----
+		// ----FILE----
 		
 		/// Calculate file name
 		$downloadfilename = clean_filename(format_string('informeglobal.ods',true));
@@ -304,15 +304,15 @@ elseif($type=='global'){
 		/// Creating the first worksheet
 		$myxls = $workbook->add_worksheet(textlib::substr(strip_tags(format_string($survey->name,true)), 0, 31));
 		
-		
 		$row_max_grado = 0;
+		
 		// GRADO
-		// Obtenemos las categorias unicas
+		// Obtain unique categories
 		if($grado_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats} WHERE grado = 1")){
-			// Cabecera general de GRADO
+			// General head of GRADO
 			$myxls->write_string(0,0,"GRADO");
 			
-			// Preparamos los arrays para insertar las cabeceras
+			// Prepare arrays to insert heads
 			$header1 = array("Tabla de Resultados Globales");
 			$header2 = array(get_string("questions", "sepug"));
 			foreach($grado_categories as $cat){
@@ -330,10 +330,10 @@ elseif($type=='global'){
 			foreach($grado_categories as $cat){
 				$row=4;
 				
-				// Obtenemos resultados de la BD
+				// Retrieve results form the DB
 				if ($stats = $DB->get_records("sepug_global_stats", array("catname"=>$cat->catname, "grado"=>1))) {
 					
-					// Imprimimos primero todas las preguntas de la columna 0, SOLO LA PRIMERA VEZ
+					// Print first all questions from column 0, do it ONLY THE FIRST TIME
 					if(!$question_col){
 						$questions = $DB->get_records("sepug_global_stats",array("catname"=>$cat->catname,"grado"=>1),"question");
 						foreach($questions as $question) {
@@ -366,12 +366,12 @@ elseif($type=='global'){
 		
 		// POSTGRADO
 		$row_max_grado++;
-		// Obtenemos las categorias unicas
+		// Obtain unique categories
 		if($postgrado_categories = $DB->get_records_sql("SELECT DISTINCT catname FROM {sepug_global_stats} WHERE grado = 0")){
-			// Cabecera general de POSTGRADO
+			// General head of POSTGRADO
 			$myxls->write_string($row_max_grado,0,"POSTGRADO");
 			
-			// Preparamos los arrays para insertar las cabeceras
+			// Prepare arrays to insert heads
 			$header1 = array("Tabla de Resultados Globales");
 			$header2 = array(get_string("questions", "sepug"));
 			foreach($postgrado_categories as $cat){
@@ -389,10 +389,10 @@ elseif($type=='global'){
 			foreach($postgrado_categories as $cat){
 				$row = $row_max_grado+4;
 				
-				// Obtenemos resultados de la BD
+				// Retrieve results form the DB
 				if ($stats = $DB->get_records("sepug_global_stats", array("catname"=>$cat->catname, "grado"=>0))) {
 					
-					// Imprimimos primero todas las preguntas de la columna 0, SOLO LA PRIMERA VEZ
+					// Print first all questions from column 0, do it ONLY THE FIRST TIME
 					if(!$question_col){
 						$questions = $DB->get_records("sepug_global_stats",array("catname"=>$cat->catname,"grado"=>0),"question");
 						foreach($questions as $question) {
@@ -427,6 +427,5 @@ elseif($type=='global'){
 		exit;
 	}
 }
-
 
 exit;

@@ -1,8 +1,7 @@
 <?php
-
 /*
-	© Universidad de Granada. Granada – 2014
-	© Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada – 2014
+	@ Universidad de Granada. Granada @ 2015
+	@ Alejandro Molina Salazar (amolinasalazar@gmail.com). Granada @ 2015
     This program is free software: you can redistribute it and/or 
     modify it under the terms of the GNU General Public License as 
     published by the Free Software Foundation, either version 3 of 
@@ -20,7 +19,7 @@
  * the final message.
  *
  * @package   mod-sepug
- * @copyright 2014 Alejandro Molina Salazar
+ * @copyright 2015 Alejandro Molina Salazar
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -29,9 +28,7 @@
 	
 	global $FILTRO_CURSOS;
 
-
-// Make sure this is a legitimate posting
-
+	// Make sure this is a legitimate posting
     if (!$formdata = data_submitted() or !confirm_sesskey()) {
         print_error('cannotcallscript');
     }
@@ -40,7 +37,7 @@
 	$cid = required_param('cid', PARAM_INT);    // Course ID
 	$group = optional_param('group', 0, PARAM_INT); // Group ID
 	
-	// Ignoramos el curso 1
+	// Skip course id = 1
 	if($cid == 1){
 		print_error('notvalidcourse','sepug');
 	}
@@ -63,35 +60,41 @@
         print_error('invalidsurveyid', 'sepug');
     }
 	
-	// Si no esta matriculado en este curso
+	// If $USER is not enrolled in this course
     if (!is_enrolled($context)) {
         echo $OUTPUT->notification(get_string("guestsnotallowed", "sepug"));
     }
 		
-	// Obtenemos todos los roles de este contexto - r: array asoc.(ids rol)
+	// We get all the roles in this context - r: array asoc.(ids rol)
 	$roles = get_user_roles($context, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
+	$studentrole = false;
+	$editingteacherrole = false;
 	foreach($roles as $rol){
-		// Si no es estudiante de este curso
-		if($rol->roleid != 5){
-			print_error('onlystudents', 'sepug');
+		if($rol->roleid == 3){
+			$editingteacherrole=true;
+		}
+		if($rol->roleid == 5){
+			$studentrole = true;
 		}
 	}
+	// If $USER is not student of this course or if is an editing teacher also
+	if(!$studentrole || $editingteacherrole){
+		print_error('onlystudents', 'sepug');
+	}
 	
-	// Si sepug NO esta activo para alumnos
+	// Check if SEPUG is activated for students
     $checktime = time();
     if (($survey->timeopen > $checktime) OR ($survey->timeclose < $checktime) 
 		OR ($survey->timeclosestudents < $checktime)){
 		print_error('sepug_is_not_open', 'sepug');
 	}
 	
-	// Pasamos filtro de cursos si procede
+	// If we had set a course filter and the course is not valid
 	if($FILTRO_CURSOS && !sepug_courseid_validator($cid)){
 		print_error('coursesfilterexception', 'sepug');
-	}	
+	}
 
-    $strsurveysaved = get_string('surveysaved', 'sepug');
-
-    $PAGE->set_title($strsurveysaved);
+    $PAGE->set_title(get_string('surveysaved', 'sepug'));
     $PAGE->set_heading($course->fullname);
     echo $OUTPUT->header();
 
@@ -100,17 +103,13 @@
         exit;
     }
 
-
-// Sort through the data and arrange it
-// This is necessary because some of the questions
-// may have two answers, eg Question 1 -> 1 and P1
-
+	// Sort through the data and arrange it
     $answers = array();
 
     foreach ($formdata as $key => $val) {
         if ($key <> "userid" && $key <> "id" && $key <> "cmid" && $key <> "cid" && $key <> "sesskey" && $key <>"group") {
             if ( substr($key,0,1) == "q") {
-                $key = clean_param(substr($key,1), PARAM_ALPHANUM);   // keep everything but the 'q', number or Pnumber
+                $key = clean_param(substr($key,1), PARAM_ALPHANUM);
             }
             if ( substr($key,0,1) == "P") {
                 $realkey = (int) substr($key,1);
@@ -153,11 +152,6 @@
 		} else {
 			$newdata->answer1 = "";
 		}
-		/*if (!empty($val[1])) {
-			$newdata->answer2 = $val[1];
-		} else {
-			$newdata->answer2 = "";
-		}*/
 
 		$DB->insert_record("sepug_answers", $newdata);
     }
@@ -166,6 +160,3 @@
 	notice(get_string("thanksforanswers","sepug", $USER->firstname), "$CFG->wwwroot/mod/sepug/view.php?id=$cmid");
 
     exit;
-
-
-
