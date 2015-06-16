@@ -87,7 +87,7 @@
 		$prof_courses = array();
 		foreach($courses as $course){
 			$cid = $course->id;
-			$cntxt = get_context_instance(CONTEXT_COURSE, $cid);
+			$cntxt = context_course::instance($cid);
 			// We get all the roles in this context - r: array asoc.(ids rol)
 			$roles = get_user_roles($cntxt, $USER->id, false, 'c.contextlevel DESC, r.sortorder ASC');
 			foreach($roles as $rol){
