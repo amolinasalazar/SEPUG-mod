@@ -48,10 +48,10 @@ $SURVEY_QTYPE = array (
 		
 // Dimension questions
 global $DIM_PLANIF, $DIM_COMP_DOC, $DIM_EV_APREND, $DIM_AMB;
-$DIM_PLANIF = array(1,2,4,5,18);
-$DIM_COMP_DOC = array(6,8,9,10,11,12,14);
-$DIM_EV_APREND = array(3,16,17);
-$DIM_AMB = array(13,15);
+$DIM_PLANIF = array(1,2,4,5,18); // Planificacion de la docencia y el Plan Docente
+$DIM_COMP_DOC = array(6,8,9,10,11,12,14); // Competencias docentes
+$DIM_EV_APREND = array(3,16,17); // Evaluacion de los aprendizajes
+$DIM_AMB = array(13,15); // Ambiente de clase y relacion profesor-a con alumno-a
 
 // Course filter
 global $FILTRO_CURSOS, $FILTRO;
