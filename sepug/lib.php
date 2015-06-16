@@ -1379,7 +1379,7 @@ function sepug_cron(){
 	global $DB;
 	
 	if(!$survey = $DB->get_record("sepug", array("sepuginstance"=>1))){
-		print_error('sepug_not_found', 'sepug');
+		mtrace('SEPUG instance not found');
 	}
 	else{
 	
