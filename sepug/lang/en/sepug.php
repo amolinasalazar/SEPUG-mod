@@ -29,7 +29,7 @@ $string['allscales'] = 'All scales, all students';
 $string['alreadysubmitted'] = 'Ya has contestado este cuestionario';
 $string['analysisof'] = 'Analysis of {$a}';
 $string['answers'] = 'Answers';
-$string['cannotfindanswer'] = 'Todav�a no hay respuestas para este cuestionario';
+$string['cannotfindanswer'] = 'Todavía no hay respuestas para este cuestionario';
 $string['cannotfindquestion'] = 'La pregunta no existe';
 $string['cannotfindsurveytmpt'] = 'No survey templates found!';
 $string['clicktocontinue'] = 'Pincha aqui para continuar';
@@ -91,7 +91,7 @@ $string['sepug:participate'] = 'Participar y contestar a las encuestas.';
 $string['sepug:readresponses'] = 'Ver resultados de las encuestas.';
 $string['surveysaved'] = 'Survey saved';
 $string['surveytype'] = 'Tipo de Cuestionario';
-$string['surveytype_help'] = 'El Cuestionario sobre la Labor Docente del Profesorado 2015 se ha elaborado siguiendo las directrices de los cuestionarios de opini&oacute;n vigentes que la Junta de Andaluc&iacute;a y el Vicerrectorado para la Garant&iacute;a de la Calidad de la Universidad de Granada ofrece. Para m�s informaci&oacute;n, visite http://calidad.ugr.es/';
+$string['surveytype_help'] = 'El Cuestionario sobre la Labor Docente del Profesorado 2015 se ha elaborado siguiendo las directrices de los cuestionarios de opini&oacute;n vigentes que la Junta de Andaluc&iacute;a y el Vicerrectorado para la Garant&iacute;a de la Calidad de la Universidad de Granada ofrece. Para más informaci&oacute;n, visite http://calidad.ugr.es/';
 $string['surveytype_link'] = 'mod/sepug/mod';
 $string['thanksforanswers'] = 'Gracias por responder a este cuestionario, {$a}, recuerda que es posible que todav&iacute;a te queden m&aacute;s cuestionarios por responder, regresa a la pantalla de inicio para comprobarlo.';
 $string['time'] = 'Time';
@@ -107,14 +107,14 @@ $string['coursesfilterexception'] = 'El filtrado de cursos no ha aceptado el ID 
 $string['sepugnotfound'] = 'No se ha encontrado una actividad SEPUG en la base de datos de Moodle.';
 
 $string['sepugtask'] = 'Computa todos los resultados recogidos por el modulo SEPUG, dependiendo de la cantidad de respuestas, esta tarea puede ser pesada para el servidor.';
-$string['activarsepug'] = 'Activar programaci�n de cuestionarios.';
+$string['activarsepug'] = 'Activar programación de cuestionarios.';
 $string['configactivarsepug'] = 'Activando este campo, establecemos la activaci&oacute;n de los cuestionarios de evaluaci&oacute;n docente en cada curso y por cada profesor que exista (salvo para cursos de pr&aacute;cticas).';
 
 $string['sepugopen'] = 'Activar el cuestionario para el alumnado';
 $string['sepugopen_help'] = 'Es obligatorio programar una fecha para que se active el acceso al cuestionario.';
 $string['sepugclosestudents'] = 'Desactivar cuestionario y ofrecer acceso a los resultados';
-$string['sepugclosestudents_help'] = 'Es obligatorio programar una fecha para desactivar el acceso al alumnado al cuestionario y activar el acceso a los resultados del profesorado. Tenga en cuenta que la producci&oacute;n los resultados globales del cuestionario puede presentar una alta carga para el servidor, dependiendo de la complejidad de las categor&iacute;as y el n&uacute;mero de cursos que existan en la plataforma Moodle.';
-$string['sepugclose'] = 'Cerrar acceso y eliminar resultados obtenidos';
+$string['sepugclosestudents_help'] = 'Es obligatorio programar una fecha para desactivar el acceso al alumnado al cuestionario y activar el acceso a los resultados del profesorado. Tenga en cuenta que la producci&oacute;n los resultados globales depende de la ejecuci&oacute;n de cron.php y puede presentar una alta carga para el servidor, dependiendo de la complejidad de las categor&iacute;as y el n&uacute;mero de cursos que existan en la plataforma Moodle.';
+$string['sepugclose'] = 'Cerrar acceso a los resultados obtenidos';
 $string['sepugclose_help'] = 'Es obligatorio programar una fecha para cerrar definitivamente el acceso al cuestionario. Al realizar dicha acci&oacute;n, se proceder&aacute; a la eliminaci&oacute;n de todos los datos almacenados en la base de datos. Se recomienda fijar un margen de tiempo prudente para que los resultados puedan ser visualizados.';
 
 $string['onlystudents'] = 'Solo los estudiantes del curso (sin otro tipo de rol) pueden contestar cuestionarios.';
@@ -124,10 +124,10 @@ $string['globaldownload'] = 'Descargar fichero de datos global';
 
 
 $string['sepug_is_not_open'] = 'Esta actividad se encuentra en estos momentos cerrada.';
-$string['sepug_close_for_students'] = 'El periodo de apertura para completar cuestionarios ha finalizado.';
+$string['sepug_close_for_students'] = 'Estimado/a alumno/a, el periodo de apertura para completar cuestionarios ha finalizado.';
 $string['sepug_not_allowed'] = 'Solo alumnos o profesores pueden usar este modulo.';
 $string['no_courses'] = 'No puedes acceder al cuestionario, ya que no estas matriculado en ning&uacute;n curso de la plataforma Moodle.';
-$string['no_results'] = 'Los resultados de los cuestionarios a&uacute;n no estan listos.';
+$string['no_results'] = 'Estimado/a profesor/a, los resultados de los cuestionarios a&uacute;n no estan listos.';
 $string['go_to_survey'] = 'Ir al cuestionario';
 $string['go_to_results'] = 'Ir a los resultados';
 $string['modulename_full'] = 'SEPUG: Sistema de Evaluaci&oacute;n del Profesorado de la Universidad de Granada';
@@ -136,7 +136,7 @@ $string['closestudentsdate'] = 'Los alumnos/as pueden completar cuestionarios ha
 $string['closedate'] = 'Los profesores/as pueden acceder a sus resultados hasta el {$a}.';
 $string['selectsurvey_label'] = 'Lista de cursos:';
 $string['selectgroupsurvey_label'] = 'Grupo:';
-$string['all_surveys_are_done'] = 'Ya ha completado todos los cuestionarios disponibles. Gracias por tu participaci&oacute;n.';
+$string['all_surveys_are_done'] = 'Estimado/a alumno/a, ya ha completado todos los cuestionarios disponibles. Gracias por tu participaci&oacute;n.';
 $string['show_results'] = 'Visualizar resultados por cursos';
 $string['access_surveys'] = 'Acceder a los cuestionarios';
 $string['grouptext']='Elige un grupo: ';
@@ -149,9 +149,9 @@ $string['depth_limit'] = 'Nivel de profundidad';
 $string['depth_limit_help'] = 'Se permite seleccionar el nivel de profundidad m&aacute;ximo de las categor&iacute;as que se quieren explorar. El valor seleccionado es INCLUSIVE, siendo el NIVEL 1 el nivel m&iacute;nimo. Por ejemplo, seleccionando NIVEL 3, se mostraran en los informes de resultados todas las categor&iacute;as relacionadas con el curso en cuestion hasta el nivel 3 de profundidad, dejando fuera del informe los resultados de los dem&aacute;s niveles.';
 $string['config'] = 'Configuraci&oacute;n';
 $string['catgrado'] = 'Categor&iacute;a de grado del peri&oacute;do lectivo actual';
-$string['catgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las ense�anzas de grado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser GRADO 14/15.';
+$string['catgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las enseñanzas de grado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser GRADO 14/15. Según el curso pertenezca a Grado o Postgrado, se asignará un cuestionarío diferente.';
 $string['catposgrado'] = 'Categor&iacute;a de postgrado del peri&oacute;do lectivo actual';
-$string['catposgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las ense�anzas de postgrado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser POSTGRADO 14/15.';
+$string['catposgrado_help'] = 'Selecci&oacute;n de la categor&iacute;a de primer nivel que pertenece al curso actual y a las enseñanzas de postgrado. Por ejemplo, el nombre de esa categor&iacute;a podr&iacute;a ser POSTGRADO 14/15. Según el curso pertenezca a Grado o Postgrado, se asignará un cuestionarío diferente.';
 
 
 $string['summary'] = 'Informe resultados';
@@ -176,7 +176,7 @@ $string['sexo'] = 'Sexo:';
 $string['sexooptions'] = 'Hombre, Mujer';
 $string['edad'] = 'Edad:';
 $string['edadoptions'] = 
-'16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120';
+'16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99';
 $string['interes'] = 'Mi grado de inter&eacute;s es:';
 $string['dificultad'] = 'Mi grado de dificultad es:';
 $string['niveloptions'] = 'Bajo, Medio, Alto';
